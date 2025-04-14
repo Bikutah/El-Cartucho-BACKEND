@@ -21,3 +21,6 @@ yarn-error.log
 /.nova
 /.vscode
 /.zed
+# NO ignores esto si querés que estén en GitHub
+.api/index.php
+.vercel
