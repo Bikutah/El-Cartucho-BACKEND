@@ -8,6 +8,6 @@ class HolaController extends Controller
 {
     public function saludo()
     {
-        return 'Hola Mundo desde un controlador!';
+        return view('saludo');
     }
 }
