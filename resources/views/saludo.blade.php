@@ -20,6 +20,6 @@
         @endif
     </head>
     <body class="bg-[#071833] dark:bg-[#07070f] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
-        <img class="h-[600px] w-[600px] rounded-lg shadow-2xl shadow-[#071833]" src="https://i.postimg.cc/KjTpN5bS/raw.png" alt="Foto">
+        <img class="h-[500px] w-[500px] rounded-lg shadow-2xl shadow-[#071833]" src="https://i.postimg.cc/KjTpN5bS/raw.png" alt="Foto">
     </body>
 </html>
