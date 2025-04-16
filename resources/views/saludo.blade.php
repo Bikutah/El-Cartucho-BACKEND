@@ -19,7 +19,11 @@
             </style>
         @endif
     </head>
-    <body class="bg-[#071833] dark:bg-[#07070f] text-[#1b1b18] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col">
-        <img class="h-[500px] w-[500px] rounded-lg shadow-2xl shadow-[#071833]" src="https://i.postimg.cc/KjTpN5bS/raw.png" alt="Foto">
+    <body class="bg-[#07070f] dark:bg-[#07070f] text-[#ffffff] flex p-6 lg:p-8 items-center lg:justify-center min-h-screen flex-col gap-10">
+        <img 
+        class="w-64 h-auto sm:w-72 md:w-80 lg:w-96 xl:w-[500px] max-w-full rounded-lg drop-shadow-[0_0_100px_#071833]" 
+        src="https://i.postimg.cc/KjTpN5bS/raw.png" 
+        alt="Foto">
+        <p>by Bikuta y Architín777</p>
     </body>
 </html>
