@@ -1,13 +1,4 @@
 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-
-    <!-- Branding -->
-    <a class="navbar-brand" href="">
-        El Cartucho 🕹️
-    </a>
-
-    <!-- Divider -->
-    <div class="topbar-divider d-none d-sm-block"></div>
-
     <!-- Topbar Navbar -->
     <ul class="navbar-nav ml-auto">
 
