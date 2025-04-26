@@ -3,8 +3,6 @@
 @section('title', 'El Cartucho')
 
 @section('content')
-<h1>El Cartucho</h1>
-
 <div class="row">
 
     <!-- Area Chart -->

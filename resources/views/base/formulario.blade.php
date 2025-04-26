@@ -30,8 +30,8 @@
                 </div>
             @endforeach
 
-            <button type="submit" class="btn btn-primary">{{ $textoBoton ?? 'Guardar' }}</button>
-            <a href="{{ $rutaVolver }}" class="btn btn-secondary">Volver al listado</a>
+            <button type="submit" class="btn btn-secondary">{{ $textoBoton ?? 'Guardar' }}</button>
+            <a href="{{ $rutaVolver }}" class="btn btn-primary">Volver</a>
         </form>
     </div>
 </div>

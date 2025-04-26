@@ -4,7 +4,7 @@
 
 @section('content')
 
-<h1 class="h3 mb-4 text-color-primario">{{ $titulo ?? 'Listado' }}</h1>
+<h1 class="h3 mb-4 text-color-primario fw-bold">{{ $titulo ?? 'Listado' }}</h1>
 
 @if (isset($rutaCrear))
     <a href="{{ route($rutaCrear) }}" class="btn btn-primary mb-3">Crear nuevo</a>
@@ -14,7 +14,7 @@
 
     <div class="card-body">
         @if (isset($encabezados) && is_array($encabezados))
-            <div class="row fw-bold border-bottom pb-2 mb-2 bg-dark text-white rounded py-2">
+            <div class="row fw-bold border-bottom pb-2 mb-2 bg-primary text-white rounded py-2">
                 @foreach ($encabezados as $encabezado)
                     <div class="col">{{ $encabezado }}</div>
                 @endforeach
@@ -27,7 +27,10 @@
                 {!! $itemTexto($item) !!}
                 <div class="col text-end">
                     @if (isset($rutaEditar))
-                        <a href="{{ route($rutaEditar, $item) }}" class="btn btn-secondary btn-sm me-2">Editar</a>
+                    <a href="{{ route($rutaEditar, $item) }}" class="btn btn-primary btn-sm me-2" 
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Editar">
+                        <i class="fa-solid fa-pen"></i>
+                    </a>
                     @endif
                 </div>
             </div>
