@@ -1,0 +1,39 @@
+@extends('layouts.app')
+
+@section('title', $titulo ?? 'Listado')
+
+@section('content')
+
+<h1 class="h3 mb-4 text-color-primario">{{ $titulo ?? 'Listado' }}</h1>
+
+@if (isset($rutaCrear))
+    <a href="{{ route($rutaCrear) }}" class="btn btn-primary mb-3">Crear nuevo</a>
+@endif
+
+<div class="card shadow mb-4">
+
+    <div class="card-body">
+        @if (isset($encabezados) && is_array($encabezados))
+            <div class="row fw-bold border-bottom pb-2 mb-2 bg-dark text-white rounded py-2">
+                @foreach ($encabezados as $encabezado)
+                    <div class="col">{{ $encabezado }}</div>
+                @endforeach
+                <div class="col text-end">Acciones</div>
+            </div>
+        @endif
+
+        @foreach ($items as $item)
+            <div class="row align-items-center border-bottom py-2">
+                {!! $itemTexto($item) !!}
+                <div class="col text-end">
+                    @if (isset($rutaEditar))
+                        <a href="{{ route($rutaEditar, $item) }}" class="btn btn-secondary btn-sm me-2">Editar</a>
+                    @endif
+                </div>
+            </div>
+        @endforeach
+
+    </div>
+</div>
+
+@endsection
