@@ -59,6 +59,10 @@ body, p, span, div, a, li, h1, h2, h3, h4, h5, h6 ::not(i) {
 .sidebar.collapsed {
   margin-left: -14rem;
 }
+.sidebar-brand-icon:hover {
+  scale: 1.1;
+  transition: all 0.2s ease-in-out;
+}
 
 @media (max-width: 991.98px) {
   .sidebar {
