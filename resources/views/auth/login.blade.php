@@ -2,22 +2,8 @@
 
 @section('content-base')
 
-<div class="d-flex justify-content-center align-items-center vh-100" style="
-    background-color: #040316;
-    background-image: 
-        radial-gradient(at 47% 33%, hsl(248, 29%, 20%) 0, transparent 59%), 
-        radial-gradient(at 82% 65%, hsl(241.48, 49%, 32%) 0, transparent 55%);
-    background-size: cover;
-    background-position: center;
-">
-    <div class="card shadow p-4" style="
-        min-width: 300px;
-        backdrop-filter: blur(25px) saturate(200%);
-        -webkit-backdrop-filter: blur(25px) saturate(200%);
-        background-color: rgba(76, 72, 103, 0.75);
-        border-radius: 12px;
-        border: 1px solid rgba(255, 255, 255, 0.125);
-    ">
+<div class="d-flex justify-content-center align-items-center vh-100 bg-gradient">
+    <div class="card shadow p-4 card-login-custom">
         <h2 class="text-center mb-4 text-white">Iniciar Sesión</h2>
 
 
@@ -52,7 +38,7 @@
                         class="form-control @error('password') is-invalid @enderror"
                         required
                     >
-                    <button type="button" class="btn btn-light" id="togglePassword">
+                    <button type="button" class="btn btn-light rounded-end" id="togglePassword">
                         <i class="fas fa-eye" id="iconPassword"></i>
                     </button>
                 </div>
