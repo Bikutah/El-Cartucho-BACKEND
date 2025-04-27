@@ -18,18 +18,34 @@
             @foreach ($campos as $campo)
                 <div class="mb-3">
                     <label for="{{ $campo['name'] }}" class="form-label">{{ $campo['label'] }}</label>
-                    <input
-                        type="{{ $campo['type'] ?? 'text' }}"
-                        id="{{ $campo['name'] }}"
-                        name="{{ $campo['name'] }}"
-                        class="form-control"
-                        placeholder="{{ $campo['placeholder'] ?? '' }}"
-                        value="{{ old($campo['name'], $campo['value'] ?? '') }}"
-                        @if (!empty($campo['required'])) required @endif
-                    >
+
+                    @if (($campo['type'] ?? 'text') === 'select')
+                        <select
+                            id="{{ $campo['name'] }}"
+                            name="{{ $campo['name'] }}"
+                            class="form-control"
+                            @if (!empty($campo['required'])) required @endif
+                        >
+                            <option value="">{{ $campo['placeholder'] ?? 'Seleccione una opción' }}</option>
+                            @foreach ($campo['options'] as $value => $text)
+                                <option value="{{ $value }}" {{ old($campo['name']) == $value ? 'selected' : '' }}>
+                                    {{ $text }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @else
+                        <input
+                            type="{{ $campo['type'] ?? 'text' }}"
+                            id="{{ $campo['name'] }}"
+                            name="{{ $campo['name'] }}"
+                            class="form-control"
+                            placeholder="{{ $campo['placeholder'] ?? '' }}"
+                            value="{{ old($campo['name'], $campo['value'] ?? '') }}"
+                            @if (!empty($campo['required'])) required @endif
+                        >
+                    @endif
                 </div>
             @endforeach
-
             <button type="submit" class="btn btn-primary">{{ $textoBoton ?? 'Guardar' }}</button>
             <a href="{{ $rutaVolver }}" class="btn btn-secondary">Volver</a>
         </form>

@@ -5,6 +5,7 @@ use App\Http\Controllers\HomeController;
 use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\AdminMiddleware;
+use App\Http\Controllers\ProductoController;
 
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -17,6 +18,8 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::get('/', [HomeController::class, 'home'])->name('home');
 
     Route::resource('categorias', CategoriaController::class);
+
+    Route::resource('productos', ProductoController::class);
 
     Route::get('/pagina-no-encontrada', [PaginaNoEncontradaController::class, 'index'])->name('paginaNoEncontrada');
 

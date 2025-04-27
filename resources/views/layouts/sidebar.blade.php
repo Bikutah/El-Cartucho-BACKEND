@@ -29,7 +29,7 @@
     </li>
     <!-- Nav Item - Productos -->
     <li class="nav-item">
-        <a class="nav-link" href="">
+        <a class="nav-link" href="{{ route('productos.index') }}">
             <i class="fas fa-fw fa-box"></i>
             <span>Productos</span></a>
     </li>

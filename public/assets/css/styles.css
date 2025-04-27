@@ -1,6 +1,7 @@
-/**{
-    font-family: 'Inter', sans-serif !important;
-}*/
+body, p, span, div, a, li, h1, h2, h3, h4, h5, h6 ::not(i) {
+    font-family: 'Inter', sans-serif;
+}
+
 .profile-circle {
     width: 40px;
     height: 40px;
@@ -20,7 +21,6 @@
     align-items: center;
 }
 
-/* Estilo para el contenedor principal */
 .bg-gradient {
     background-color: #040316;
     background-image: 
@@ -44,4 +44,53 @@
     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
+.sidebar {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 14rem;
+  height: 100vh;
+  overflow-y: auto;
+  z-index: 1030;
+  transition: all 0.3s ease;
+}
 
+.sidebar.collapsed {
+  margin-left: -14rem;
+}
+
+@media (max-width: 991.98px) {
+  .sidebar {
+    margin-left: -14rem; 
+  }
+
+  .sidebar.show {
+    margin-left: 0;
+  }
+  .sidebar > li{
+    display: flex;
+    justify-content: center;
+  }
+  .sidebar > li > a{
+    display: flex;
+    gap: 10px;
+  }
+}
+
+
+#content-wrapper {
+  margin-left: 14rem !important;
+  transition: margin 0.3s ease;
+}
+@media (max-width: 991.98px) {
+  #content-wrapper {
+    margin-left: 0 !important;
+  }
+}
+@media (max-width: 575.98px) {
+  #content-wrapper {
+    margin-left: 0 !important; 
+  }
+}
+  
