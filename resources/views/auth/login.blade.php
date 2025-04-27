@@ -4,7 +4,7 @@
 
 <div class="d-flex justify-content-center align-items-center vh-100 bg-gradient">
     <div class="card shadow p-4 card-login-custom">
-        <h2 class="text-center mb-4 text-white">Iniciar Sesión</h2>
+        <h2 class="text-center mb-4 text-white font-weight-bold">Iniciar Sesión</h2>
 
 
         <form method="POST" action="{{ route('login.submit') }}">

@@ -4,7 +4,7 @@
 
 @section('content')
 
-<h1 class="h3 mb-4 text-gray-800">{{ $titulo ?? 'Formulario' }}</h1>
+<h1 class="h3 mb-4 text-gray-800 font-weight-bold">{{ $titulo ?? 'Formulario' }}</h1>
 
 <div class="card shadow mb-4">
     <div class="card-body">
