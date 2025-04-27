@@ -29,7 +29,7 @@
                     @if (isset($rutaEditar))
                     <a href="{{ route($rutaEditar, $item) }}" class="btn btn-primary btn-sm me-2" 
                     data-bs-toggle="tooltip" data-bs-placement="top" title="Editar">
-                        <i class="fa-solid fa-pen"></i>
+                        <i class="fa fa-pen"></i>
                     </a>
                     @endif
                 </div>
