@@ -19,7 +19,7 @@
                 </a>
                 <div class="dropdown-divider"></div>
                 <!-- Botón de logout -->
-                <a class="dropdown-item" href="#"
+                <a class="dropdown-item bg-primay" href="#"
                    onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
                     <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
                     Cerrar sesión
