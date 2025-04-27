@@ -2,10 +2,10 @@
 <ul class="navbar-nav bg-gradient-primary sidebar sidebar-dark accordion" id="accordionSidebar">
     <!-- Sidebar - Brand -->
     <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ route('home') }}">
-        <div class="sidebar-brand-icon rotate-n-15">
-            <i class="fas fa-gamepad"></i>
+        <div class="sidebar-brand-icon">
+            <span><img src="{{ asset('assets/img/caballero.png') }}" alt="Favicon" style="width:50px; height:50px;"></span>
         </div>
-        <div class="sidebar-brand-text mx-3">El Cartucho</div>
+        <div class="sidebar-brand-text">El Cartucho</div>
     </a>
     <!-- Divider -->
     <hr class="sidebar-divider my-0">

@@ -14,7 +14,7 @@
             <div class="col">' . e($producto->descripcion) . '</div>
             <div class="col">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
             <div class="col">' . e($producto->stock) . '</div>
-            <div class="col">' . e($producto->categoria->nombre) . '</div>
+            <div class="col">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>
         ';
     };
 @endphp
