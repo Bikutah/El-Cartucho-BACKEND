@@ -20,4 +20,8 @@ class Producto extends Model
         'precioUnitario' => 'decimal:2',
         'stock' => 'integer',
     ];
+    public function categoria()
+    {
+        return $this->belongsTo(Categoria::class);
+    }
 }
