@@ -33,12 +33,12 @@ Este panel de administración se enfoca en gestionar todos los aspectos de *El C
 
 ## 💻 Tecnologías utilizadas
 
-- **Frontend(para el panel de administración):** 
+- **Frontend(para el panel de administración):** <br>
 ![Laravel](https://img.shields.io/badge/laravel-%23FF2D20.svg?style=for-the-badge&logo=laravel&logoColor=white) 
-- **Backend(API para el panel de administración):** 
+- **Backend(API para el panel de administración):** <br>
 ![Laravel](https://img.shields.io/badge/laravel-%23FF2D20.svg?style=for-the-badge&logo=laravel&logoColor=white) 
-- **Base de datos:** 
-![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white) SQLite3
+- **Base de datos:** <br>
+![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white) 
 
 ---
 
