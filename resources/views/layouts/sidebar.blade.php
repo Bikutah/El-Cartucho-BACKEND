@@ -18,7 +18,7 @@
     <!-- Divider -->
     <hr class="sidebar-divider">
     <!-- Heading -->
-    <div class="sidebar-heading">
+    <div class="sidebar-heading text-2xl font-bold">
         Administración
     </div>
     <!-- Nav Item - Categorías -->

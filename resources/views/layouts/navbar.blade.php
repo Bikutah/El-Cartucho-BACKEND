@@ -1,14 +1,14 @@
 <nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-    <button id="sidebarToggleTop" class="btn btn-link d-lg-none rounded-circle mr-3">
-        <i class="fa fa-bars"></i>
-    </button>
+    <!--<button id="sidebarToggleTop" class="btn btn-link d-lg-none rounded-circle mr-3">
+         <i class="fa fa-bars"></i>
+    </button> -->
     <!-- Topbar Navbar -->
     <ul class="navbar-nav ml-auto">
         <!-- Nav Item - User Information -->
         <li class="nav-item dropdown no-arrow">
             <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
                data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mr-2 d-none d-lg-inline text-gray-600 small">{{ auth()->user()->name }}</span>
+                <span class="mr-2 d-none d-lg-inline text-gray-900 small">{{ auth()->user()->name }}</span>
                 <div class="profile-circle-wrapper">
                     <div class="profile-circle"></div>
                 </div>

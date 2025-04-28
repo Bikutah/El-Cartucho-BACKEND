@@ -25,7 +25,7 @@
   --gray: #858796;
   --gray-dark: #5a5c69;
   --primary: #1d1936;
-  --secondary: #858796;
+  --secondary: #1F1F1F;
   --success: #1cc88a;
   --info: #36b9cc;
   --warning: #f6c23e;
@@ -64,7 +64,7 @@ body {
   font-size: 1rem;
   font-weight: 400;
   line-height: 1.5;
-  color: #858796;
+  color: #1F1F1F;
   text-align: left;
   background-color: #fff;
 }
@@ -10686,7 +10686,7 @@ a:focus {
 }
 
 .sidebar-dark .sidebar-heading {
-  color: rgba(255, 255, 255, 0.4);
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .sidebar-dark .nav-item .nav-link {
