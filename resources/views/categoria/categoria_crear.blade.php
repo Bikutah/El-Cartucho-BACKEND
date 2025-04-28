@@ -18,6 +18,7 @@
             'label' => 'Descripción',
             'placeholder' => 'Descripción de la categoría',
             'required' => true,
+            'type' => 'textarea',
         ],
     ];
 @endphp

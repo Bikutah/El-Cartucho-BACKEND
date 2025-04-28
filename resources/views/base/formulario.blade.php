@@ -33,6 +33,16 @@
                                 </option>
                             @endforeach
                         </select>
+                    @elseif (($campo['type'] ?? 'text') === 'textarea')
+                        <textarea
+                            id="{{ $campo['name'] }}"
+                            name="{{ $campo['name'] }}"
+                            class="form-control"
+                            placeholder="{{ $campo['placeholder'] ?? '' }}"
+                            rows="{{ $campo['rows'] ?? 4 }}"
+                            cols="{{ $campo['cols'] ?? 50 }}"
+                            @if (!empty($campo['required'])) required @endif
+                        >{{ old($campo['name'], $campo['value'] ?? '') }}</textarea>
                     @else
                         <input
                             type="{{ $campo['type'] ?? 'text' }}"

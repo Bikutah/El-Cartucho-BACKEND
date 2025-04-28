@@ -20,6 +20,7 @@
             'placeholder' => 'Descripción de la categoría',
             'value' => $categoria->descripcion,
             'required' => true,
+            'type' => 'textarea',
         ],
     ];
 @endphp

@@ -19,7 +19,8 @@
             'label' => 'Descripción',
             'placeholder' => 'Descripción del producto',
             'required' => true,
-            'value' => $producto->descripcion
+            'value' => $producto->descripcion,
+            'type' => 'textarea',
         ],
         [
             'name' => 'precioUnitario',

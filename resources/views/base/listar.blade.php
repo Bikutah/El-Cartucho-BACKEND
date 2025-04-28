@@ -8,7 +8,7 @@
 <div class="card shadow mb-4">
     <div class="card-body">
         @if (isset($encabezados) && is_array($encabezados))
-            <div class="row border-bottom pb-2 mb-2 bg-primary text-white rounded py-2 font-weight-bold">
+            <div class=" row border-bottom pb-2 mb-2 bg-primary text-white rounded py-2 font-weight-bold">
                 @foreach ($encabezados as $encabezado)
                     <div class="col">{{ $encabezado }}</div>
                 @endforeach

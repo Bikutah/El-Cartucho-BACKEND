@@ -18,6 +18,9 @@
             'label' => 'Descripción',
             'placeholder' => 'Descripción del producto',
             'required' => true,
+            'type' => 'textarea',
+            'rows' => 4,
+            'cols' => 50,
         ],
         [
             'name' => 'precioUnitario',
