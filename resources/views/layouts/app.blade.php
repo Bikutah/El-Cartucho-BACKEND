@@ -4,15 +4,16 @@
     <div id="wrapper">
         @include('layouts.sidebar')
         <!-- Content Wrapper -->
-        <div id="content-wrapper" class="d-flex flex-column">
-            <!-- Main Content -->
-            <div id="content">
-            @include('layouts.navbar')
-                <div class="container-fluid mt-4">
+        <div id="content-wrapper" class="d-flex flex-column min-vh-100">
+        <!-- Main Content -->
+            <div id="content" class="d-flex flex-column flex-grow-1">
+                @include('layouts.navbar')
+                <!-- Aquí se expande al espacio disponible -->
+                <div class="container-fluid flex-grow-1 mt-4">
                     @yield('content')
                 </div>
             </div>
-        </div>     
+        </div>   
     </div>
 </body>
 @endsection
