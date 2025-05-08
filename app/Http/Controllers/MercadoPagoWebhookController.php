@@ -18,7 +18,11 @@ class MercadoPagoWebhookController extends Controller
 
         // Acá podrías manejar distintos eventos: payment, merchant_order, etc.
         if ($tipo === 'payment') {
-            Log::info('➡️ Webhook: tipo de evento es "payment". ID recibido: ' . $data);
+            Log::channel('database')->info('Webhook de pago recibido', [
+                'payment_id' => $request->input('data.id'),
+                'topic' => $request->input('type') ?? $request->input('topic'),
+                'payload' => $request->all()
+            ]);
         }        
 
         return response()->json(['status' => 'ok']);
