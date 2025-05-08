@@ -4,6 +4,7 @@ namespace App\Logging\Handlers;
 
 use Monolog\Handler\AbstractProcessingHandler;
 use Monolog\Logger;
+use Monolog\LogRecord;
 use DB;
 
 class DatabaseLogHandler extends AbstractProcessingHandler
@@ -13,7 +14,7 @@ class DatabaseLogHandler extends AbstractProcessingHandler
         parent::__construct($level, $bubble);
     }
 
-    protected function write(array $record): void
+    protected function write(LogRecord $record): void
     {
         DB::table('logs')->insert([
             'level' => $record['level_name'],
