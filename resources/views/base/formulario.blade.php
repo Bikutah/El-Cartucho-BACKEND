@@ -28,9 +28,9 @@
                         >
                             <option value="">{{ $campo['placeholder'] ?? 'Seleccione una opción' }}</option>
                             @foreach ($campo['options'] as $value => $text)
-                                <option value="{{ $value }}" {{ old($campo['name']) == $value ? 'selected' : '' }}>
-                                    {{ $text }}
-                                </option>
+                            <option value="{{ $value }}" {{ (old($campo['name'], $campo['value'] ?? null) == $value) ? 'selected' : '' }}>
+                                {{ $text }}
+                            </option>
                             @endforeach
                         </select>
                     @elseif (($campo['type'] ?? 'text') === 'textarea')

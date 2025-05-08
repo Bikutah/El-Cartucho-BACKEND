@@ -43,6 +43,11 @@ class ProductoController extends Controller
     public function edit(Producto $producto)
     {
         $categorias = Categoria::all();
+        if ($producto->categoria_id) {
+            $producto->categoria = Categoria::find($producto->categoria_id);
+        } else {
+            $producto->categoria = null;
+        }
         return view('producto.producto_editar', compact('producto', 'categorias'));
     }
 
