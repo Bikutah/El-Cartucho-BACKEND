@@ -23,9 +23,6 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::resource('productos', ProductoController::class);
 
     Route::resource('subcategorias', SubcategoriaController::class);
-
-    Route::get('/pagina-no-encontrada', [PaginaNoEncontradaController::class, 'index'])->name('paginaNoEncontrada');
-
 });
 
 
