@@ -3,7 +3,7 @@
     <!-- Sidebar - Brand -->
     <a class="sidebar-brand d-flex align-items-center justify-content-center" href="{{ route('home') }}">
         <div class="sidebar-brand-icon">
-            <span><img src="{{ asset('assets/img/caballero.png') }}" alt="Favicon" style="width:50px; height:50px;"></span>
+            <span><img src="{{ asset('assets/img/caballero.webp') }}" alt="Favicon" style="width:50px; height:50px;"></span>
         </div>
         <div class="sidebar-brand-text">El Cartucho</div>
     </a>
