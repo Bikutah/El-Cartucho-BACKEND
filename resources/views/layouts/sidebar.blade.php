@@ -27,6 +27,12 @@
             <i class="fas fa-fw fa-tags"></i>
             <span>Categorías</span></a>
     </li>
+        <!-- Nav Item - Subcategorias -->
+        <li class="nav-item">
+        <a class="nav-link" href="{{ route('subcategorias.index') }}">
+            <i class="fas fa-fw fa-tags"></i>
+            <span>Subcategorías</span></a>
+    </li>
     <!-- Nav Item - Productos -->
     <li class="nav-item">
         <a class="nav-link" href="{{ route('productos.index') }}">

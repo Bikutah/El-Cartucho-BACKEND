@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\SubcategoriaController;
 
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -21,8 +22,7 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
     Route::resource('productos', ProductoController::class);
 
-    Route::get('/pagina-no-encontrada', [PaginaNoEncontradaController::class, 'index'])->name('paginaNoEncontrada');
-
+    Route::resource('subcategorias', SubcategoriaController::class);
 });
 
 

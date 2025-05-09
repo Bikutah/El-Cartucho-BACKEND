@@ -13,8 +13,20 @@ if (file_exists($maintenance = __DIR__.'/../storage/framework/maintenance.php'))
 // Register the Composer autoloader...
 require __DIR__.'/../vendor/autoload.php';
 
-// Bootstrap Laravel and handle the request...
+// Bootstrap Laravel...
 /** @var Application $app */
 $app = require_once __DIR__.'/../bootstrap/app.php';
 
+// Ejecutar migraciones automáticamente si es necesario
+try {
+    $app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+
+    if (!Illuminate\Support\Facades\Schema::hasTable('migrations')) {
+        Illuminate\Support\Facades\Artisan::call('migrate', ['--force' => true]);
+    }
+} catch (\Throwable $e) {
+    error_log("Error al correr migraciones: " . $e->getMessage());
+}
+
+// Manejar la solicitud...
 $app->handleRequest(Request::capture());
