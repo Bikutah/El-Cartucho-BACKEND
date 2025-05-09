@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>@yield('title', 'Panel de Administración')</title>
+    <link rel="shortcut icon" href="assets/img/favicon.ico" />
     <!-- Fonts y CSS -->
     <link href="{{ asset('assets/vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/css/bootstrap.css') }}" rel="stylesheet">
