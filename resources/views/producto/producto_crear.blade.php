@@ -39,9 +39,8 @@
         [
             'name' => 'imagen',
             'label' => 'Imagen',
-            'placeholder' => 'URL de la imagen del producto',
-            'type' => 'url',
-            'required' => false,
+            'type' => 'file',
+            'required' => true,
         ],
         [
             'name' => 'categoria_id',
@@ -53,3 +52,4 @@
         ]
     ];
 @endphp
+

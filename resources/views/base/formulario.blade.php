@@ -8,7 +8,7 @@
 
 <div class="card shadow mb-4">
     <div class="card-body">
-        <form action="{{ $action }}" method="POST">
+        <form action="{{ $action }}" method="POST" enctype="multipart/form-data">
             @csrf
 
             @if (isset($method) && $method !== 'POST')
@@ -43,6 +43,14 @@
                             cols="{{ $campo['cols'] ?? 50 }}"
                             @if (!empty($campo['required'])) required @endif
                         >{{ old($campo['name'], $campo['value'] ?? '') }}</textarea>
+                        @elseif (($campo['type'] ?? 'text') === 'file' || $campo['name'] === 'imagen')
+                        <input
+                            type="file"
+                            id="{{ $campo['name'] }}"
+                            name="{{ $campo['name'] }}"
+                            class="form-control"
+                            @if (!empty($campo['required'])) required @endif
+                        >
                     @else
                         <input
                             type="{{ $campo['type'] ?? 'text' }}"
@@ -54,6 +62,7 @@
                             @if (!empty($campo['required'])) required @endif
                         >
                     @endif
+
                 </div>
             @endforeach
             <button type="submit" class="btn btn-primary">{{ $textoBoton ?? 'Guardar' }}</button>

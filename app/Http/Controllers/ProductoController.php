@@ -4,6 +4,9 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use Illuminate\Http\Request;
 use App\Models\Categoria;
+use Cloudinary\Cloudinary;
+use Illuminate\Support\Facades\Http;
+
 
 class ProductoController extends Controller
 {
@@ -30,7 +33,42 @@ class ProductoController extends Controller
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        Producto::create($request->all());
+        $data = $request->except('imagen');
+
+        if ($request->hasFile('imagen')) {
+            $uploadedFile = $request->file('imagen');
+            $timestamp = time();
+
+            $cloudName = config('cloudinary.cloud.cloud_name');
+            $apiKey = config('cloudinary.cloud.api_key');
+            $apiSecret = config('cloudinary.cloud.api_secret');
+
+            $signature = hash('sha256', "folder=productos&timestamp=$timestamp$apiSecret");
+
+            $response = Http::withoutVerifying() // ✅ Esto desactiva SSL check
+                ->attach(
+                    'file',
+                    file_get_contents($uploadedFile->getRealPath()),
+                    $uploadedFile->getClientOriginalName()
+                )
+                ->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
+                    'api_key'    => $apiKey,
+                    'timestamp'  => $timestamp,
+                    'folder'     => 'productos',
+                    'signature'  => $signature,
+                ]);
+
+            if (!$response->successful()) {
+                return back()->withErrors(['imagen' => 'Error al subir imagen a Cloudinary']);
+            }
+
+            $result = $response->json();
+
+            $data['image_url'] = $result['secure_url'] ?? null;
+            $data['image_public_id'] = $result['public_id'] ?? null;
+        }
+
+        Producto::create($data);
 
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
     }
