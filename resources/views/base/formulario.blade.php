@@ -44,13 +44,25 @@
                             @if (!empty($campo['required'])) required @endif
                         >{{ old($campo['name'], $campo['value'] ?? '') }}</textarea>
                         @elseif (($campo['type'] ?? 'text') === 'file' || $campo['name'] === 'imagen')
-                        <input
-                            type="file"
-                            id="{{ $campo['name'] }}"
-                            name="{{ $campo['name'] }}"
-                            class="form-control"
-                            @if (!empty($campo['required'])) required @endif
-                        >
+                        <div class="mb-3">
+                            <label for="imagen" class="btn btn-primary">
+                                Seleccionar imagen
+                            </label>
+                            <input
+                                type="file"
+                                id="imagen"
+                                name="imagen"
+                                accept="image/*"
+                                class="d-none"
+                                onchange="previewImagen(event)"
+                                required
+                            >
+
+                            <div class="mt-3">
+                                <img id="preview" src="#" alt="Vista previa" style="max-width: 100%; max-height: 300px; display: none;">
+                            </div>
+                        </div>
+
                     @else
                         <input
                             type="{{ $campo['type'] ?? 'text' }}"

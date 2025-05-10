@@ -38,7 +38,7 @@
         ],
         [
             'name' => 'imagen',
-            'label' => 'Imagen',
+            'label' => '',
             'type' => 'file',
             'required' => true,
         ],
