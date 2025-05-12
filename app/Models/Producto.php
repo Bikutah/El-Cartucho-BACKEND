@@ -13,14 +13,16 @@ class Producto extends Model
         'descripcion',
         'precioUnitario',
         'stock',
-        'image_url', 
-        'image_public_id',
         'categoria_id'
     ];
     protected $casts = [
         'precioUnitario' => 'decimal:2',
         'stock' => 'integer',
     ];
+    public function imagenes()
+    {
+        return $this->hasMany(Imagen::class);
+    }
     public function categoria()
     {
         return $this->belongsTo(Categoria::class);

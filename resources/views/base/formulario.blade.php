@@ -1,3 +1,4 @@
+@php use Illuminate\Support\Str; @endphp
 @extends('layouts.app')
 
 @section('title', $titulo ?? 'Formulario')
@@ -15,13 +16,18 @@
 
                 {{-- Campos dinámicos --}}
                 @foreach ($campos as $campo)
-                    <div class="mb-3">
-                        <label for="{{ $campo['name'] }}" class="form-label">{{ $campo['label'] }}</label>
+                    @php
+                        $inputId = 'input_' . Str::slug($campo['name'], '_');
+                        $previewId = 'preview_' . Str::slug($campo['name'], '_');
+                    @endphp
 
-                        {{-- Input, Select o Textarea --}}
+                    <div class="mb-3">
+                        <label for="{{ $inputId }}" class="form-label">{{ $campo['label'] }}</label>
+
+                        {{-- Select --}}
                         @if (($campo['type'] ?? 'text') === 'select')
                             <select
-                                id="{{ $campo['name'] }}"
+                                id="{{ $inputId }}"
                                 name="{{ $campo['name'] }}"
                                 class="form-control @error($campo['name']) is-invalid @enderror"
                                 @if (!empty($campo['required'])) required @endif
@@ -34,9 +40,10 @@
                                 @endforeach
                             </select>
 
+                        {{-- Textarea --}}
                         @elseif (($campo['type'] ?? 'text') === 'textarea')
                             <textarea
-                                id="{{ $campo['name'] }}"
+                                id="{{ $inputId }}"
                                 name="{{ $campo['name'] }}"
                                 class="form-control @error($campo['name']) is-invalid @enderror"
                                 placeholder="{{ $campo['placeholder'] ?? '' }}"
@@ -45,25 +52,26 @@
                                 @if (!empty($campo['required'])) required @endif
                             >{{ old($campo['name'], $campo['value'] ?? '') }}</textarea>
 
-                        @elseif (($campo['type'] ?? 'text') === 'file' || $campo['name'] === 'imagen')
-                            <label for="imagen" class="btn btn-primary">Seleccionar imagen</label>
+                        {{-- Campo de archivo --}}
+                        @elseif (($campo['type'] ?? 'text') === 'file')
                             <input
                                 type="file"
-                                id="imagen"
-                                name="imagen"
+                                id="{{ $inputId }}"
+                                name="{{ $campo['name'] }}"
                                 accept="image/*"
-                                class="d-none"
-                                onchange="previewImagen(event)"
+                                class="form-control @error($campo['name']) is-invalid @enderror"
                                 @if (!empty($campo['required'])) required @endif
+                                @if (!empty($campo['multiple'])) multiple @endif
+                                onchange="previewMultipleImages(event, '{{ $previewId }}')"
                             >
-                            <div class="mt-3">
-                                <img id="preview" src="#" alt="Vista previa" style="max-width: 100%; max-height: 300px; display: none;">
-                            </div>
+                            {{-- Contenedor de previews --}}
+                            <div class="mt-3 d-flex gap-2 flex-wrap" id="{{ $previewId }}"></div>
 
+                        {{-- Input estándar --}}
                         @else
                             <input
                                 type="{{ $campo['type'] ?? 'text' }}"
-                                id="{{ $campo['name'] }}"
+                                id="{{ $inputId }}"
                                 name="{{ $campo['name'] }}"
                                 class="form-control @error($campo['name']) is-invalid @enderror"
                                 placeholder="{{ $campo['placeholder'] ?? '' }}"
@@ -72,10 +80,20 @@
                             >
                         @endif
 
-                        {{-- Mensaje de error individual --}}
+                        {{-- Errores --}}
                         @error($campo['name'])
                             <div class="text-danger mt-1">{{ $message }}</div>
                         @enderror
+
+                        {{-- Errores por imagen individual --}}
+                        @if (str_contains($campo['name'], 'imagenes'))
+                            @error('imagenes')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
+                            @error('imagenes.*')
+                                <div class="text-danger mt-1">{{ $message }}</div>
+                            @enderror
+                        @endif
                     </div>
                 @endforeach
 
