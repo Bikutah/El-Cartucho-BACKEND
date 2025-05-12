@@ -12,9 +12,37 @@ class ProductoController extends Controller
 {
     public function index()
     {
-        $productos = Producto::with('categoria')->get();
-        return view('producto.producto_listar',compact('productos'));
+        $productos = Producto::with('categoria')->paginate(10);
+
+        if (request()->ajax()) {
+            return view('base.partials.tabla', [
+                'items' => $productos,
+                'columnas' => ['Id', 'Nombre', 'Descripción', 'PrecioUnitario', 'Stock', 'Categoría', 'Imagen'],
+                'rutaEditar' => 'productos.edit',
+                'renderFila' => function ($producto) {
+                    $html = '
+                        <div class="col">' . e($producto->id) . '</div>
+                        <div class="col">' . e($producto->nombre) . '</div>
+                        <div class="col">' . e($producto->descripcion) . '</div>
+                        <div class="col">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
+                        <div class="col">' . e($producto->stock) . '</div>
+                        <div class="col">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>
+                    ';
+
+                    if (!empty($producto->image_url)) {
+                        $html .= '<div class="col"><img src="' . e($producto->image_url) . '" alt="Imagen" style="max-width: 70px; max-height: 70px;"></div>';
+                    } else {
+                        $html .= '<div class="col">Sin imagen</div>';
+                    }
+
+                    return $html;
+                }
+            ])->render();
+        }
+
+        return view('producto.producto_listar', compact('productos'));
     }
+
 
     public function create()
     {

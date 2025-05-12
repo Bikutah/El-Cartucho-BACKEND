@@ -11,9 +11,24 @@ class CategoriaController extends Controller
      */
     public function index()
     {
-        $categorias = Categoria::all();
+        $categorias = Categoria::paginate(10); 
+
+        if (request()->ajax()) {
+            return view('base.partials.tabla', [
+                'items' => $categorias,
+                'columnas' => ['Id', 'Nombre', 'Descripción'],
+                'rutaEditar' => 'categorias.edit',
+                'renderFila' => fn($categoria) => '
+                    <div class="col">' . e($categoria->id) . '</div>
+                    <div class="col">' . e($categoria->nombre) . '</div>
+                    <div class="col">' . e($categoria->descripcion) . '</div>
+                '
+            ])->render();
+        }
+
         return view('categoria.categoria_listar', compact('categorias'));
     }
+
 
     /**
      * Show the form for creating a new resource.

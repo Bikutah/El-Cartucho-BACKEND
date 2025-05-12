@@ -10,11 +10,9 @@
     <div class="card-body">
         <form action="{{ $action }}" method="POST" enctype="multipart/form-data">
             @csrf
-
             @if (isset($method) && $method !== 'POST')
                 @method($method)
             @endif
-
             @foreach ($campos as $campo)
                 <div class="mb-3">
                     <label for="{{ $campo['name'] }}" class="form-label">{{ $campo['label'] }}</label>
@@ -43,7 +41,7 @@
                             cols="{{ $campo['cols'] ?? 50 }}"
                             @if (!empty($campo['required'])) required @endif
                         >{{ old($campo['name'], $campo['value'] ?? '') }}</textarea>
-                        @elseif (($campo['type'] ?? 'text') === 'file' || $campo['name'] === 'imagen')
+                    @elseif (($campo['type'] ?? 'text') === 'file' || $campo['name'] === 'imagen')
                         <div class="mb-3">
                             <label for="imagen" class="btn btn-primary">
                                 Seleccionar imagen
@@ -62,7 +60,6 @@
                                 <img id="preview" src="#" alt="Vista previa" style="max-width: 100%; max-height: 300px; display: none;">
                             </div>
                         </div>
-
                     @else
                         <input
                             type="{{ $campo['type'] ?? 'text' }}"

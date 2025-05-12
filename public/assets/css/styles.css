@@ -128,7 +128,7 @@ body, p, span, div, a, li, h1, h2, h3, h4, h5, h6 ::not(i) {
   font-size: 0.9rem;
 }
 
-.login-page .login-submit-btn:hover {
+.login-page .login-submit-btn:hover{
   background: linear-gradient(to bottom, #ffb06a, #ff9d4d);
   transform: translateY(-2px);
   box-shadow: 0 4px 8px rgba(255, 157, 77, 0.3);
@@ -171,8 +171,65 @@ body, p, span, div, a, li, h1, h2, h3, h4, h5, h6 ::not(i) {
   }
 }
 
-
-
-
-
+  .pagination-modern {
+      display: flex;
+      gap: 0.5rem;
+  }
   
+  .pagination-modern .pagination {
+      display: flex;
+      gap: 0.5rem;
+  }
+  
+  .pagination-modern .page-item .page-link {
+      border-radius: 0.5rem;
+      padding: 0.5rem 0.75rem;
+      color: #1d1936;
+      background-color: transparent;
+      border: 1px solid #e9ecef;
+      transition: all 0.3s ease;
+      font-weight: 500;
+      position: relative;
+  }
+  
+  .pagination-modern .page-item .page-link:hover {
+      color: #fff;
+      background-color: #282442;
+      border-color: #282442;
+      transform: translateY(-1px);
+      box-shadow: 0 2px 5px rgba(29, 25, 54, 0.2);
+  }
+
+  .pagination-modern .page-item.active .page-link {
+      color: #fff;
+      background-color: #1d1936;
+      border-color: #1d1936;
+      font-weight: 600;
+      box-shadow: 0 2px 5px rgba(29, 25, 54, 0.3);
+  }
+  
+  .pagination-modern .page-item.disabled .page-link {
+      color: #a8a8b3;
+      pointer-events: none;
+      background-color: transparent;
+      border-color: #e9ecef;
+  }
+  
+  .pagination-modern .page-item .page-link:focus {
+      box-shadow: 0 0 0 0.2rem rgba(105, 136, 228, 0.5);
+      outline: none;
+  }
+  
+  .pagination-modern .page-item:first-child .page-link,
+  .pagination-modern .page-item:last-child .page-link {
+      background-color: transparent;
+      color: #1d1936;
+      border-color: #e9ecef;
+  }
+  
+  .page-item:first-child{
+      margin-left: 5px;
+  }
+  .pagination-modern .page-link:active {
+      transform: translateY(0);
+  }

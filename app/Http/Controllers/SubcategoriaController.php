@@ -10,9 +10,24 @@ class SubcategoriaController extends Controller
 {
     public function index()
     {
-        $subcategorias = Subcategoria::all();
+        $subcategorias = Subcategoria::with('categoria')->paginate(10); 
+
+        if (request()->ajax()) {
+            return view('base.partials.tabla', [
+                'items' => $subcategorias,
+                'columnas' => ['Id', 'Nombre', 'Categoría'],
+                'rutaEditar' => 'subcategorias.edit',
+                'renderFila' => fn($subcategoria) => '
+                    <div class="col">' . e($subcategoria->id) . '</div>
+                    <div class="col">' . e($subcategoria->nombre) . '</div>
+                    <div class="col">' . e($subcategoria->categoria->nombre ?? 'Sin Categoría') . '</div>
+                '
+            ])->render();
+        }
+
         return view('subcategoria.subcategoria_listar', compact('subcategorias'));
     }
+
 
     public function create()
     {
