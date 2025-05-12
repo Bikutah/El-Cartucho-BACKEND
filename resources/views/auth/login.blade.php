@@ -17,9 +17,8 @@
                         type="text" 
                         id="name" 
                         name="name" 
-                        class="form-control login-input @error('name') is-invalid @enderror"
+                        class="form-control login-input "
                         value="{{ old('name') }}"
-                        required 
                         autofocus
                     >
                     @error('name')
@@ -36,19 +35,20 @@
                             type="password" 
                             id="password" 
                             name="password" 
-                            class="form-control login-input @error('password') is-invalid @enderror"
-                            required
+                            class="form-control login-input "
                         >
                         <button type="button" class="btn btn-light login-eye-btn" id="togglePassword">
                             <i class="fas fa-eye" id="iconPassword"></i>
                         </button>
                     </div>
-                    @error('password')
-                        <div class="invalid-feedback d-block">
-                            {{ $message }}
-                        </div>
-                    @enderror
+
                 </div>
+                    @if (session('login_error'))
+                        <p class="text-danger text-center mb-3">
+                            {{ session('login_error') }}
+                        </p>
+                    @endif
+
 
                 <div class="d-flex justify-content-center align-items-center">
                     <button type="submit" class="btn btn-secondary w-100 login-submit-btn">INGRESAR</button>

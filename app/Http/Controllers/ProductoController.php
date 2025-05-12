@@ -58,8 +58,24 @@ class ProductoController extends Controller
             'precioUnitario' => 'required|numeric',
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048|required',
+        ], [
+            'nombre.required' => 'El nombre del producto es obligatorio.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'precioUnitario.required' => 'El precio unitario es obligatorio.',
+            'precioUnitario.numeric' => 'El precio debe ser un número.',
+            'stock.required' => 'El stock es obligatorio.',
+            'stock.integer' => 'El stock debe ser un número entero.',
+            'categoria_id.required' => 'Debe seleccionar una categoría.',
+            'categoria_id.exists' => 'La categoría seleccionada no es válida.',
+            'imagen.image' => 'El archivo debe ser una imagen.',
+            'imagen.mimes' => 'La imagen debe ser de tipo jpeg, png, jpg o gif.',
+            'imagen.max' => 'La imagen no puede superar los 2MB.',
+            'imagen.required' => 'La imagen es obligatoria.',
         ]);
+
+        \Log::info('Formulario validado con éxito');
+
 
         $data = $request->except('imagen');
 
@@ -126,6 +142,19 @@ class ProductoController extends Controller
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',
             'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ], [
+            'nombre.required' => 'El nombre del producto es obligatorio.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'precioUnitario.required' => 'El precio unitario es obligatorio.',
+            'precioUnitario.numeric' => 'El precio debe ser un número.',
+            'stock.required' => 'El stock es obligatorio.',
+            'stock.integer' => 'El stock debe ser un número entero.',
+            'categoria_id.required' => 'Debe seleccionar una categoría.',
+            'categoria_id.exists' => 'La categoría seleccionada no es válida.',
+            'imagen.image' => 'El archivo debe ser una imagen.',
+            'imagen.mimes' => 'La imagen debe ser de tipo jpeg, png, jpg o gif.',
+            'imagen.max' => 'La imagen no puede superar los 2MB.',
+            'imagen.required' => 'La imagen es obligatoria.',
         ]);
 
         $producto = Producto::findOrFail($id);
