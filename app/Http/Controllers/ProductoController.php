@@ -145,9 +145,9 @@ class ProductoController extends Controller
             'imagenes.*.mimes' => 'Las imágenes deben ser de tipo jpeg, png, jpg o gif.',
             'imagenes.*.max' => 'Cada imagen no puede superar los 2MB.',
         ]);
-
-
+        
         $data = $request->except('imagenes');
+
         $producto = Producto::create($data);
 
         \Log::info('Imágenes recibidas:', $request->file('imagenes'));

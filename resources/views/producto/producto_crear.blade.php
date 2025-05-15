@@ -37,12 +37,13 @@
             'required' => true,
         ],
         [
-            'name' => 'imagenes[]', // importante para subir múltiples archivos
+            'name' => 'imagenes',
             'label' => 'Imágenes del producto',
             'type' => 'file',
             'required' => true,
-            'multiple' => true, // personalización para el formulario
-],
+            'multiple' => true,
+            'accept' => 'image/*',
+        ],
         [
             'name' => 'categoria_id',
             'label' => 'Categoría',

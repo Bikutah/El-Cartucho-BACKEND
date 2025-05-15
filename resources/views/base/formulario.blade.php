@@ -52,32 +52,18 @@
                                 @if (!empty($campo['required'])) required @endif
                             >{{ old($campo['name'], $campo['value'] ?? '') }}</textarea>
 
-                        {{-- Campo de archivo --}}
-                        @elseif (($campo['type'] ?? 'text') === 'file')
-                            <input
-                                type="file"
-                                id="{{ $inputId }}"
-                                name="imagenes[]" 
-                                accept="image/*"
-                                class="form-control @error($campo['name']) is-invalid @enderror"
-                                @if (!empty($campo['required'])) required @endif
-                                @if (!empty($campo['multiple'])) multiple @endif
-                                onchange="previewMultipleImages(event, '{{ $previewId }}')"
-                            />
-
-                            {{-- Contenedor de previews --}}
-                            <div class="mt-3 d-flex gap-2 flex-wrap" id="{{ $previewId }}"></div>
-
                         {{-- Input estándar --}}
                         @else
                             <input
                                 type="{{ $campo['type'] ?? 'text' }}"
                                 id="{{ $inputId }}"
-                                name="{{ $campo['name'] }}"
+                                name="{{ !empty($campo['multiple']) ? $campo['name'] . '[]' : $campo['name'] }}"
                                 class="form-control @error($campo['name']) is-invalid @enderror"
                                 placeholder="{{ $campo['placeholder'] ?? '' }}"
-                                value="{{ old($campo['name'], $campo['value'] ?? '') }}"
+                                value="{{ (!in_array($campo['type'] ?? 'text', ['file']) && empty($campo['multiple'])) ? old($campo['name'], $campo['value'] ?? '') : '' }}"
                                 @if (!empty($campo['required'])) required @endif
+                                @if (!empty($campo['multiple'])) multiple @endif
+                                @if (!empty($campo['accept'])) accept="{{ $campo['accept'] }}" @endif
                             >
                         @endif
 
