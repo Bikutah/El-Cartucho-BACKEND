@@ -57,13 +57,14 @@
                             <input
                                 type="file"
                                 id="{{ $inputId }}"
-                                name="{{ $campo['name'] }}"
+                                name="imagenes[]" 
                                 accept="image/*"
                                 class="form-control @error($campo['name']) is-invalid @enderror"
                                 @if (!empty($campo['required'])) required @endif
                                 @if (!empty($campo['multiple'])) multiple @endif
                                 onchange="previewMultipleImages(event, '{{ $previewId }}')"
-                            >
+                            />
+
                             {{-- Contenedor de previews --}}
                             <div class="mt-3 d-flex gap-2 flex-wrap" id="{{ $previewId }}"></div>
 

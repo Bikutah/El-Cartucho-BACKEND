@@ -56,3 +56,4 @@ function previewMultipleImages(event, previewId) {
         reader.readAsDataURL(file);
     });
 }
+
