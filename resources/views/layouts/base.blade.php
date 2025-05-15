@@ -6,10 +6,13 @@
     <title>@yield('title', 'Panel de Administración')</title>
     <link rel="shortcut icon" href="assets/img/favicon.ico" />
     <!-- Fonts y CSS -->
+
+    
     <link href="{{ asset('assets/vendor/fontawesome/css/all.min.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/css/bootstrap.css') }}" rel="stylesheet">
     <link href="{{ asset('assets/css/styles.css') }}" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
 </head>
 <body>
     @yield('content-base')
