@@ -10,9 +10,24 @@ class SubcategoriaController extends Controller
 {
     public function index()
     {
-        $subcategorias = Subcategoria::all();
+        $subcategorias = Subcategoria::with('categoria')->paginate(10); 
+
+        if (request()->ajax()) {
+            return view('base.partials.tabla', [
+                'items' => $subcategorias,
+                'columnas' => ['Id', 'Nombre', 'Categoría'],
+                'rutaEditar' => 'subcategorias.edit',
+                'renderFila' => fn($subcategoria) => '
+                    <div class="col">' . e($subcategoria->id) . '</div>
+                    <div class="col">' . e($subcategoria->nombre) . '</div>
+                    <div class="col">' . e($subcategoria->categoria->nombre ?? 'Sin Categoría') . '</div>
+                '
+            ])->render();
+        }
+
         return view('subcategoria.subcategoria_listar', compact('subcategorias'));
     }
+
 
     public function create()
     {
@@ -23,9 +38,18 @@ class SubcategoriaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255|unique:subcategorias,nombre',
             'categoria_id' => 'required|exists:categorias,id'
+        ], [
+            'nombre.required' => 'El nombre de la subcategoría es obligatorio.',
+            'nombre.string' => 'El nombre debe ser una cadena de texto.',
+            'nombre.max' => 'El nombre no puede superar los 255 caracteres.',
+            'nombre.unique' => 'Ya existe una subcategoría con ese nombre.',
+
+            'categoria_id.required' => 'Debes seleccionar una categoría.',
+            'categoria_id.exists' => 'La categoría seleccionada no existe.',
         ]);
+
 
         Subcategoria::create($request->all());
 
@@ -51,8 +75,16 @@ class SubcategoriaController extends Controller
     public function update(Request $request, string $id)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255',
+            'nombre' => 'required|string|max:255|unique:subcategorias,nombre',
             'categoria_id' => 'required|exists:categorias,id'
+        ], [
+            'nombre.required' => 'El nombre de la subcategoría es obligatorio.',
+            'nombre.string' => 'El nombre debe ser una cadena de texto.',
+            'nombre.max' => 'El nombre no puede superar los 255 caracteres.',
+            'nombre.unique' => 'Ya existe una subcategoría con ese nombre.',
+
+            'categoria_id.required' => 'Debes seleccionar una categoría.',
+            'categoria_id.exists' => 'La categoría seleccionada no existe.',
         ]);
 
         $subcategoria = Subcategoria::findOrFail($id);

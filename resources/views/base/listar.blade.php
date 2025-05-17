@@ -40,5 +40,25 @@
             </div>
         @endforeach
     </div>
-</div>
 @endsection
+@push('scripts')
+<script>
+$(document).ready(function () {
+    $(document).on('click', '#tabla-items .pagination a', function(e) {
+        e.preventDefault();
+        let url = $(this).attr('href');
+        $.ajax({
+            url: url,
+            type: 'GET',
+            dataType: 'html',
+            success: function(data) {
+                $('#tabla-items').html(data);
+            },
+            error: function() {
+                alert('Error al cargar los datos.');
+            }
+        });
+    });
+});
+</script>
+@endpush

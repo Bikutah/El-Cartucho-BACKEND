@@ -37,10 +37,12 @@
             'required' => true,
         ],
         [
-            'name' => 'imagen',
-            'label' => '',
+            'name' => 'imagenes',
+            'label' => 'Imágenes del producto',
             'type' => 'file',
             'required' => true,
+            'multiple' => true,
+            'accept' => 'image/*',
         ],
         [
             'name' => 'categoria_id',
@@ -51,5 +53,7 @@
             'required' => true,
         ]
     ];
+
+    
 @endphp
 

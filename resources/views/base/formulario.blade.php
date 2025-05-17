@@ -1,3 +1,4 @@
+@php use Illuminate\Support\Str; @endphp
 @extends('layouts.app')
 
 @section('title', $titulo ?? 'Formulario')
@@ -62,6 +63,13 @@
                                 onchange="previewImagen(event)"
                                 required
                             >
+                                <option value="">{{ $campo['placeholder'] ?? 'Seleccione una opción' }}</option>
+                                @foreach ($campo['options'] as $value => $text)
+                                    <option value="{{ $value }}" {{ old($campo['name'], $campo['value'] ?? null) == $value ? 'selected' : '' }}>
+                                        {{ $text }}
+                                    </option>
+                                @endforeach
+                            </select>
 
                             <div id="preview-wrapper" class="position-relative mt-3" style="display: none;">
                                 <button type="button" id="clear-preview" class="btn-close position-absolute top-0 end-0 m-2" aria-label="Cerrar" onclick="clearPreview()"></button>

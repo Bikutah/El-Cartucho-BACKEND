@@ -11,9 +11,24 @@ class CategoriaController extends Controller
      */
     public function index()
     {
-        $categorias = Categoria::all();
+        $categorias = Categoria::paginate(10); 
+
+        if (request()->ajax()) {
+            return view('base.partials.tabla', [
+                'items' => $categorias,
+                'columnas' => ['Id', 'Nombre', 'Descripción'],
+                'rutaEditar' => 'categorias.edit',
+                'renderFila' => fn($categoria) => '
+                    <div class="col">' . e($categoria->id) . '</div>
+                    <div class="col">' . e($categoria->nombre) . '</div>
+                    <div class="col">' . e($categoria->descripcion) . '</div>
+                '
+            ])->render();
+        }
+
         return view('categoria.categoria_listar', compact('categorias'));
     }
+
 
     /**
      * Show the form for creating a new resource.
@@ -29,7 +44,16 @@ class CategoriaController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255'
+            'nombre' => 'required|string|max:255|unique:categorias,nombre',
+            'descripcion' => 'required|string'
+        ], [
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.string' => 'El nombre debe ser una cadena de texto.',
+            'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
+            'nombre.unique' => 'Ya existe una categoría con ese nombre.',
+
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.string' => 'La descripción debe ser una cadena de texto.',
         ]);
 
         Categoria::create($request->all());
@@ -59,7 +83,16 @@ class CategoriaController extends Controller
     public function update(Request $request, Categoria $categoria)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255'
+            'nombre' => 'required|string|max:255|unique:categorias,nombre',
+            'descripcion' => 'required|string'
+        ], [
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.string' => 'El nombre debe ser una cadena de texto.',
+            'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
+            'nombre.unique' => 'Ya existe una categoría con ese nombre.',
+
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.string' => 'La descripción debe ser una cadena de texto.',
         ]);
 
         $categoria->update($request->all());
