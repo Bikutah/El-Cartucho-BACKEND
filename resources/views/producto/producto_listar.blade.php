@@ -3,7 +3,7 @@
     $titulo = 'Listado de Productos';
     $rutaCrear = 'productos.create';
     $rutaEditar = 'productos.edit';
-    $columnas = ['Id','Nombre', 'Descripción','PrecioUnitario','Stock','Categoría','Imagen'];
+    $columnas = ['Id','Nombre', 'Descripción','Precio','Stock','Categoría','Imagen'];
     $items = $productos;
     $renderFila = function($producto) {
         $html = '

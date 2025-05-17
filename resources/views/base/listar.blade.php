@@ -15,9 +15,8 @@
 
 <div class="card shadow border-0 mb-4" style="background-color: rgba(255,255,255,0.05);">
     <div class="card-body">
-                @if (isset($columnas) && is_array($columnas))
-            <div class="row g-2 border-bottom pb-2 mb-3 px-2 py-1 rounded" style="background-color: var(--color-primario); color: #1a1040; font-weight: bold;">
-
+            @if (isset($columnas) && is_array($columnas))
+            <div class="row g-2 border-bottom pb-2 mb-3 px-2 py-1 rounded" style="background-color: var(--color-indigo-dark) !important; color: #fff; font-weight: bold;">
             @foreach ($columnas as $columna)
                 <div class="col">{{ $columna }}</div>
             @endforeach

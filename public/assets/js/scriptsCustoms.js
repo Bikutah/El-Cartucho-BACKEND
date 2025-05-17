@@ -1,64 +1,63 @@
+/**
+ * Scripts personalizados para la aplicación
+ */
 
-
-
-document.addEventListener('DOMContentLoaded', function () {
+document.addEventListener('DOMContentLoaded', function() {
+    // Inicializar tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-    tooltipTriggerList.forEach(function (tooltipTriggerEl) {
-    new bootstrap.Tooltip(tooltipTriggerEl);
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl);
+    });
+    
+    // Inicializar popovers
+    var popoverTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="popover"]'));
+    var popoverList = popoverTriggerList.map(function (popoverTriggerEl) {
+        return new bootstrap.Popover(popoverTriggerEl);
+    });
+    
+    // Marcar el enlace activo en la navegación
+    const currentPath = window.location.pathname;
+    document.querySelectorAll('.sidebar .nav-link, .offcanvas-sidebar-custom .nav-link').forEach(link => {
+        const href = link.getAttribute('href');
+        if (href === currentPath || 
+            (href !== '/' && currentPath.startsWith(href))) {
+            link.classList.add('active');
+        }
+    });
+    
+    // Cerrar automáticamente las alertas después de 5 segundos
+    const alerts = document.querySelectorAll('.alert:not(.alert-permanent)');
+    alerts.forEach(alert => {
+        setTimeout(() => {
+            const bsAlert = new bootstrap.Alert(alert);
+            bsAlert.close();
+        }, 5000);
+    });
+    
+    // Confirmar eliminación
+    const deleteButtons = document.querySelectorAll('.btn-delete');
+    deleteButtons.forEach(button => {
+        button.addEventListener('click', function(e) {
+            if (!confirm('¿Está seguro que desea eliminar este elemento?')) {
+                e.preventDefault();
+            }
+        });
     });
 });
 
-
-    document.addEventListener('DOMContentLoaded', function () {
-        const input = document.querySelector('input[type="file"][name="imagenes[]"]');
-        const preview = document.createElement('div');
-        preview.id = 'preview-imagenes';
-        preview.className = 'd-flex flex-wrap gap-2 mt-2';
-        input.parentNode.appendChild(preview);
-
-        input.addEventListener('change', function () {
-            preview.innerHTML = '';
-            Array.from(this.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = e => {
-                    const img = document.createElement('img');
-                    img.src = e.target.result;
-                    img.className = 'border rounded';
-                    img.style.width = '100px';
-                    img.style.height = '100px';
-                    img.style.objectFit = 'cover';
-                    preview.appendChild(img);
-                };
-                reader.readAsDataURL(file);
-            });
-        });
-    });
-    
-    function previewImagen(event) {
-        const input = event.target;
-        const previewWrapper = document.getElementById('preview-wrapper');
-        const previewImg = document.getElementById('preview');
-        const clearBtn = document.getElementById('clear-preview');
-
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-
-            reader.onload = function(e) {
-                previewImg.src = e.target.result;
-                previewWrapper.style.display = 'block';
-            };
-
-            reader.readAsDataURL(input.files[0]);
+/**
+ * Función para mostrar una vista previa de la imagen seleccionada
+ * @param {HTMLInputElement} input - El input de tipo file
+ * @param {string} previewId - El ID del elemento donde se mostrará la vista previa
+ */
+function previewImage(input, previewId) {
+    const preview = document.getElementById(previewId);
+    if (input.files && input.files[0]) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            preview.style.display = 'block';
         }
+        reader.readAsDataURL(input.files[0]);
     }
-
-    function clearPreview() {
-        const input = document.getElementById('imagen');
-        const previewImg = document.getElementById('preview');
-        const previewWrapper = document.getElementById('preview-wrapper');
-
-        input.value = "";
-        previewImg.src = "#";
-        previewWrapper.style.display = 'none';
-    }
-
+}
