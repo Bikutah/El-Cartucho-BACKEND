@@ -15,18 +15,19 @@
 
 <div class="card shadow border-0 mb-4" style="background-color: rgba(255,255,255,0.05);">
     <div class="card-body">
-        @if (isset($encabezados) && is_array($encabezados))
+                @if (isset($columnas) && is_array($columnas))
             <div class="row g-2 border-bottom pb-2 mb-3 px-2 py-1 rounded" style="background-color: var(--color-primario); color: #1a1040; font-weight: bold;">
-                @foreach ($encabezados as $encabezado)
-                    <div class="col">{{ $encabezado }}</div>
-                @endforeach
+
+            @foreach ($columnas as $columna)
+                <div class="col">{{ $columna }}</div>
+            @endforeach
                 <div class="col text-end">Acciones</div>
             </div>
         @endif
 
         @foreach ($items as $item)
             <div class="row g-2 align-items-center border-bottom py-2 px-2" style="color: var(--color-texto);">
-                {!! $itemTexto($item) !!}
+                {!! $renderFila($item) !!}
                 <div class="col text-end">
                     @if (isset($rutaEditar))
                         <a href="{{ route($rutaEditar, $item) }}" 

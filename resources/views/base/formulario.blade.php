@@ -12,80 +12,83 @@
     <div class="card-body">
         <form action="{{ $action }}" method="POST" enctype="multipart/form-data">
             @csrf
-            @if (isset($method) && $method !== 'POST')
+            @if (isset($method) && strtoupper($method) !== 'POST')
                 @method($method)
             @endif
 
             @foreach ($campos as $campo)
+                @php
+                    $name = $campo['name'];
+                    $type = $campo['type'] ?? 'text';
+                    $label = $campo['label'] ?? Str::title($name);
+                    $required = !empty($campo['required']) ? 'required' : '';
+                    $placeholder = $campo['placeholder'] ?? '';
+                    $value = old($name, $campo['value'] ?? '');
+                    $multiple = !empty($campo['multiple']);
+                    $accept = $campo['accept'] ?? 'image/*';
+                    $id = Str::slug($name, '_');
+                @endphp
+
                 <div class="mb-3">
-                    <label for="{{ $campo['name'] }}" class="form-label fw-semibold" style="color: var(--color-secundario);">
-                        {{ $campo['label'] }}
-                        @if (!empty($campo['required'])) <span class="text-danger">*</span> @endif
+                    <label for="{{ $id }}" class="form-label fw-semibold" style="color: var(--color-secundario);">
+                        {{ $label }}
+                        @if ($required) <span class="text-danger">*</span> @endif
                     </label>
 
-                    @if (($campo['type'] ?? 'text') === 'select')
+                    @if ($type === 'select')
                         <select
-                            id="{{ $campo['name'] }}"
-                            name="{{ $campo['name'] }}"
+                            id="{{ $id }}"
+                            name="{{ $name }}"
                             class="form-select"
-                            @if (!empty($campo['required'])) required @endif
+                            {{ $required }}
                         >
-                            <option value="">{{ $campo['placeholder'] ?? 'Seleccione una opción' }}</option>
-                            @foreach ($campo['options'] as $value => $text)
-                                <option value="{{ $value }}" {{ (old($campo['name'], $campo['value'] ?? null) == $value) ? 'selected' : '' }}>
-                                    {{ $text }}
+                            <option value="">{{ $placeholder ?: 'Seleccione una opción' }}</option>
+                            @foreach (($campo['options'] ?? []) as $optionValue => $optionText)
+                                <option value="{{ $optionValue }}" {{ $value == $optionValue ? 'selected' : '' }}>
+                                    {{ $optionText }}
                                 </option>
                             @endforeach
                         </select>
 
-                    @elseif (($campo['type'] ?? 'text') === 'textarea')
+                    @elseif ($type === 'textarea')
                         <textarea
-                            id="{{ $campo['name'] }}"
-                            name="{{ $campo['name'] }}"
+                            id="{{ $id }}"
+                            name="{{ $name }}"
                             class="form-control"
-                            placeholder="{{ $campo['placeholder'] ?? '' }}"
+                            placeholder="{{ $placeholder }}"
                             rows="{{ $campo['rows'] ?? 4 }}"
                             cols="{{ $campo['cols'] ?? 50 }}"
-                            @if (!empty($campo['required'])) required @endif
-                        >{{ old($campo['name'], $campo['value'] ?? '') }}</textarea>
+                            {{ $required }}
+                        >{{ $value }}</textarea>
 
-                    @elseif (($campo['type'] ?? 'text') === 'file' || $campo['name'] === 'imagen')
-                        <div class="mb-3">
-                            <label for="imagen" class="btn btn-outline-primary">
-                                Seleccionar imagen
-                            </label>
-                            <input
-                                type="file"
-                                id="imagen"
-                                name="imagen"
-                                accept="image/*"
-                                class="d-none"
-                                onchange="previewImagen(event)"
-                                required
-                            >
-                                <option value="">{{ $campo['placeholder'] ?? 'Seleccione una opción' }}</option>
-                                @foreach ($campo['options'] as $value => $text)
-                                    <option value="{{ $value }}" {{ old($campo['name'], $campo['value'] ?? null) == $value ? 'selected' : '' }}>
-                                        {{ $text }}
-                                    </option>
-                                @endforeach
-                            </select>
+                    @elseif ($type === 'file')
+                        <input
+                            type="file"
+                            id="{{ $id }}"
+                            name="{{ $name }}{{ $multiple ? '[]' : '' }}"
+                            class="form-control"
+                            accept="{{ $accept }}"
+                            {{ $required }}
+                            {{ $multiple ? 'multiple' : '' }}
+                        >
 
+                        {{-- Vista previa solo si es campo imagen simple --}}
+                        @if ($name === 'imagen')
                             <div id="preview-wrapper" class="position-relative mt-3" style="display: none;">
                                 <button type="button" id="clear-preview" class="btn-close position-absolute top-0 end-0 m-2" aria-label="Cerrar" onclick="clearPreview()"></button>
                                 <img id="preview" src="#" alt="Vista previa" class="img-fluid border rounded p-1" style="max-height: 300px;">
                             </div>
-                        </div>
+                        @endif
 
                     @else
                         <input
-                            type="{{ $campo['type'] ?? 'text' }}"
-                            id="{{ $campo['name'] }}"
-                            name="{{ $campo['name'] }}"
+                            type="{{ $type }}"
+                            id="{{ $id }}"
+                            name="{{ $name }}"
                             class="form-control"
-                            placeholder="{{ $campo['placeholder'] ?? '' }}"
-                            value="{{ old($campo['name'], $campo['value'] ?? '') }}"
-                            @if (!empty($campo['required'])) required @endif
+                            placeholder="{{ $placeholder }}"
+                            value="{{ $value }}"
+                            {{ $required }}
                         >
                     @endif
                 </div>
