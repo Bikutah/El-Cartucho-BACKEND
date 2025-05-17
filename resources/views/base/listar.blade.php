@@ -1,29 +1,40 @@
 @extends('layouts.app')
+
 @section('title', $titulo ?? 'Listado')
+
 @section('content')
-<h1 class="h3 mb-4 text-color-primario font-weight-bold">{{ $titulo ?? 'Listado' }}</h1>
+<h1 class="h3 mb-4 fw-bold" style="color: var(--color-primario);">
+    {{ $titulo ?? 'Listado' }}
+</h1>
+
 @if (isset($rutaCrear))
-    <a href="{{ route($rutaCrear) }}" class="btn btn-primary mb-3">Crear nuevo</a>
+    <a href="{{ route($rutaCrear) }}" class="btn btn-primary mb-3">
+        <i class="fas fa-plus me-1"></i> Crear nuevo
+    </a>
 @endif
-<div class="card shadow mb-4">
+
+<div class="card shadow border-0 mb-4" style="background-color: rgba(255,255,255,0.05);">
     <div class="card-body">
         @if (isset($encabezados) && is_array($encabezados))
-            <div class=" row border-bottom pb-2 mb-2 bg-primary text-white rounded py-2 font-weight-bold">
+            <div class="row g-2 border-bottom pb-2 mb-3 px-2 py-1 rounded" style="background-color: var(--color-primario); color: #1a1040; font-weight: bold;">
                 @foreach ($encabezados as $encabezado)
                     <div class="col">{{ $encabezado }}</div>
                 @endforeach
                 <div class="col text-end">Acciones</div>
             </div>
         @endif
+
         @foreach ($items as $item)
-            <div class="row align-items-center border-bottom py-2">
+            <div class="row g-2 align-items-center border-bottom py-2 px-2" style="color: var(--color-texto);">
                 {!! $itemTexto($item) !!}
                 <div class="col text-end">
                     @if (isset($rutaEditar))
-                    <a href="{{ route($rutaEditar, $item) }}" class="btn btn-primary btn-sm me-2" 
-                    data-bs-toggle="tooltip" data-bs-placement="top" title="Editar">
-                        <i class="fa fa-pen"></i>
-                    </a>
+                        <a href="{{ route($rutaEditar, $item) }}" 
+                           class="btn btn-sm d-inline-flex align-items-center justify-content-center" 
+                           style="background-color: var(--color-secundario); border: none; color: var(--color-terciario);"
+                           data-bs-toggle="tooltip" data-bs-placement="top" title="Editar">
+                            <i class="fas fa-pen"></i>
+                        </a>
                     @endif
                 </div>
             </div>

@@ -15,20 +15,32 @@ document.addEventListener('DOMContentLoaded', function () {
             new bootstrap.Tooltip(tooltipTriggerEl);
         });
     });
-
+    
     function previewImagen(event) {
         const input = event.target;
-        const preview = document.getElementById('preview');
+        const previewWrapper = document.getElementById('preview-wrapper');
+        const previewImg = document.getElementById('preview');
+        const clearBtn = document.getElementById('clear-preview');
 
         if (input.files && input.files[0]) {
             const reader = new FileReader();
 
             reader.onload = function(e) {
-                preview.src = e.target.result;
-                preview.style.display = 'block';
+                previewImg.src = e.target.result;
+                previewWrapper.style.display = 'block';
             };
 
             reader.readAsDataURL(input.files[0]);
         }
+    }
+
+    function clearPreview() {
+        const input = document.getElementById('imagen');
+        const previewImg = document.getElementById('preview');
+        const previewWrapper = document.getElementById('preview-wrapper');
+
+        input.value = "";
+        previewImg.src = "#";
+        previewWrapper.style.display = 'none';
     }
 

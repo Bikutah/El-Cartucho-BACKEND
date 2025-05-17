@@ -1,5 +1,46 @@
+/* ===========================
+   🎨 Paleta de Colores
+   =========================== */
+:root {
+    /* 🎨 Colores base */
+    --color-primario: #0fffc1;
+    --color-primario-hover: #2dffc7;
+    --color-secundario: #845ef7;
+    --color-terciario: #121212;
+
+    /* 🌆 Fondo y elementos */
+    --color-fondo: #1e1e2f;
+    --color-navbar: #2a2a3d;
+    --color-sidebar: #2f2f46;
+    --color-cards: #2b2b3e;
+
+    /* ✍️ Textos y bordes */
+    --color-texto: #f1f1f1;
+    --color-texto-secundario: #b0b0b0;
+    --color-borde: #3c3c4e;
+    --color-input-bg: #2b2b3c;
+    --color-input-focus: #383850;
+    --color-input-border-focus: #0fffc1;
+
+    /* 🚨 Estado */
+    --color-error: #ff6b6b;
+    --color-success: #51cf66;
+    --color-warning: #fcc419;
+}
+
+/* ===========================
+   🌐 Tipografía Global
+   =========================== */
 body, p, span, div, a, li, h1, h2, h3, h4, h5, h6 ::not(i) {
     font-family: 'Inter', sans-serif;
+}
+
+/* ===========================
+   👤 Perfil - NavBar
+   =========================== */
+.profile-circle-wrapper {
+    display: flex;
+    align-items: center;
 }
 
 .profile-circle {
@@ -10,169 +51,238 @@ body, p, span, div, a, li, h1, h2, h3, h4, h5, h6 ::not(i) {
     align-items: center;
     justify-content: center;
     margin-right: 10px;
-    background: linear-gradient(to right bottom, #008080, #4d1b7b, #ef4f91);
+    background: linear-gradient(to right bottom, teal, #4d1b7b, var(--color-primario));
     color: white;
     font-weight: bold;
     overflow: hidden;
 }
 
-.profile-circle-wrapper {
-    display: flex;
-    align-items: center;
-}
-
-/* login.css */
-
+/* ===========================
+   🔐 Login Page
+   =========================== */
 .login-page {
-  margin: 0;
-  padding: 0;
-  background-color: #0a0a1a;
-  position: relative;
-  overflow: hidden;
+    margin: 0;
+    padding: 0;
+    background-color: var(--color-terciario);
+    position: relative;
+    overflow: hidden;
 }
 
 .login-page .archway-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100vh;
-  background-image: url('/assets/img/background-image.jpg');
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  z-index: 1;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100vh;
+    background-image: url('/assets/img/background-image.jpg');
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    z-index: 1;
 }
 
 .login-page .form-container {
-  position: relative;
-  width: 100%;
-  height: 100vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .login-page .card-login-custom {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 100%;
-  max-width: 320px;
-  z-index: 10;
-  background-color: rgba(16, 12, 36, 0.6);
-  border: none;
-  padding: 20px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 100%;
+    max-width: 320px;
+    z-index: 10;
+    background-color: rgba(16, 12, 36, 0.6);
+    border: none;
+    padding: 20px;
 }
 
 .login-page h2 {
-  color: #ff9d4d;
-  text-shadow: 0 0 10px rgba(255, 157, 77, 0.5);
-  letter-spacing: 1px;
-  font-size: 1.5rem;
+    color: var(--color-primario);
+    text-shadow: 0 0 10px rgba(255, 157, 77, 0.5);
+    letter-spacing: 1px;
+    font-size: 1.5rem;
 }
 
+/* ===========================
+   🏷️ Labels
+   =========================== */
 .login-page .login-label {
-  color: #c4a7ff;
-  display: flex;
-  align-items: center;
-  font-size: 0.9rem;
+    color: var(--color-secundario);
+    display: flex;
+    align-items: center;
+    font-size: 0.9rem;
 }
 
 .login-page label[for="name"]::before,
 .login-page label[for="password"]::before {
-  content: '';
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  margin-right: 8px;
-  background-size: contain;
-  background-repeat: no-repeat;
+    content: '';
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    margin-right: 8px;
+    background-size: contain;
+    background-repeat: no-repeat;
 }
 
 .login-page label[for="name"]::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23c4a7ff' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23c4a7ff' viewBox='0 0 24 24'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E");
 }
 
 .login-page label[for="password"]::before {
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23c4a7ff' viewBox='0 0 24 24'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E");
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='%23c4a7ff' viewBox='0 0 24 24'%3E%3Cpath d='M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'/%3E%3C/svg%3E");
 }
 
+/* ===========================
+   ✏️ Inputs
+   =========================== */
 .login-page .login-input {
-  background-color: rgba(30, 20, 60, 0.7);
-  border: 1px solid #3d2b5f;
-  border-radius: 0;
-  color: #ffffff;
-  padding: 8px;
-  height: 40px;
-  font-size: 0.9rem;
+    background-color: var(--color-input-bg);
+    border: 1px solid var(--color-borde);
+    border-radius: 0;
+    color: var(--color-texto);
+    padding: 8px;
+    height: 40px;
+    font-size: 0.9rem;
 }
 
 .login-page .login-input:focus {
-  background-color: rgba(40, 30, 80, 0.8);
-  border-color: #6e4db3;
-  box-shadow: 0 0 8px rgba(110, 77, 179, 0.5);
-  color: #ffffff;
+    background-color: var(--color-input-focus);
+    border-color: var(--color-input-border-focus);
+    box-shadow: 0 0 8px rgba(110, 77, 179, 0.5);
+    color: var(--color-texto);
 }
 
+/* ===========================
+   ✅ Botón de Ingreso
+   =========================== */
 .login-page .login-submit-btn {
-  background: linear-gradient(to bottom, #ff9d4d, #ff7e1f);
-  border: 1px solid #ff7e1f;
-  color: #1a1040;
-  font-weight: bold;
-  padding: 8px 20px;
-  transition: all 0.3s;
-  border-radius: 0;
-  height: 40px;
-  font-size: 0.9rem;
+    background: linear-gradient(to bottom, var(--color-primario), #ff7e1f);
+    border: 1px solid #ff7e1f;
+    color: #1a1040;
+    font-weight: bold;
+    padding: 8px 20px;
+    transition: all 0.3s;
+    border-radius: 0;
+    height: 40px;
+    font-size: 0.9rem;
 }
 
 .login-page .login-submit-btn:hover {
-  background: linear-gradient(to bottom, #ffb06a, #ff9d4d);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(255, 157, 77, 0.3);
+    background: linear-gradient(to bottom, var(--color-primario-hover), var(--color-primario));
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(255, 157, 77, 0.3);
 }
 
+/* ===========================
+   👁️ Botón Mostrar Contraseña
+   =========================== */
 .login-page .login-eye-btn {
-  background-color: rgba(30, 20, 60, 0.7);
-  border: 1px solid #3d2b5f;
-  color: #c4a7ff;
-  height: 40px;
+    background-color: var(--color-input-bg);
+    border: 1px solid var(--color-borde);
+    color: var(--color-secundario);
+    height: 40px;
 }
 
 .login-page .login-eye-btn:hover {
-  background-color: rgba(40, 30, 80, 0.8);
-  color: #ffffff;
+    background-color: var(--color-input-focus);
+    color: var(--color-texto);
 }
 
 .login-page .login-eye-btn i {
-  color: #c4a7ff;
+    color: var(--color-secundario);
 }
 
+/* ===========================
+   ⚠️ Mensaje de Error
+   =========================== */
 .login-page .invalid-feedback {
-  color: #ff6a6a;
-  margin-top: 5px;
-  font-size: 0.8rem;
+    color: var(--color-error);
+    margin-top: 5px;
+    font-size: 0.8rem;
 }
 
+/* ===========================
+   ✅ Botones Bootstrap
+   =========================== */
+.btn-primary {
+    background-color: var(--color-primario);
+    border-color: var(--color-primario);
+    color: #121212;
+    font-weight: 600;
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primario-hover);
+    border-color: var(--color-primario-hover);
+    color: #121212;
+    transform: translateY(-1px);
+    box-shadow: 0 3px 6px rgba(15, 255, 193, 0.3);
+}
+
+.btn-outline-primary {
+    border-color: var(--color-primario);
+    color: var(--color-primario);
+}
+
+.btn-outline-primary:hover {
+    background-color: var(--color-primario);
+    color: #121212;
+}
+
+/* ===========================
+   📱 Responsive
+   =========================== */
 @media (max-width: 768px) {
-  .login-page .archway-container {
-      background-size: cover;
-  }
-  
-  .login-page .card-login-custom {
-      max-width: 280px;
-      padding: 15px;
-  }
-  
-  .login-page h2 {
-      font-size: 1.3rem;
-  }
+    .login-page .archway-container {
+        background-size: cover;
+    }
+
+    .login-page .card-login-custom {
+        max-width: 280px;
+        padding: 15px;
+    }
+
+    .login-page h2 {
+        font-size: 1.3rem;
+    }
 }
 
 
+.sidebar {
+    transition: all 0.3s ease;
+    overflow-x: hidden;
+    background-color: var(--color-sidebar); /* o el que uses */
+    min-height: 100vh;
+}
 
+.sidebar-expanded {
+    width: 200px;
+}
 
+.sidebar-collapsed {
+    width: 125px;
+}
 
-  
+.sidebar-hidden {
+    width: 0;
+    display: none;
+}
+
+.offcanvas-sidebar-custom {
+    background-color: var(--color-sidebar) !important;
+    color: var(--color-texto); /* blanco */
+}
+.offcanvas-sidebar-custom .nav-link {
+    color: var(--color-texto); /* blanco */
+}
+.offcanvas-sidebar-custom .nav-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+}
+
