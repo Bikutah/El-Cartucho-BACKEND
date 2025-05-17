@@ -21,26 +21,23 @@
                     $name = $campo['name'];
                     $type = $campo['type'] ?? 'text';
                     $label = $campo['label'] ?? Str::title($name);
-                    $required = !empty($campo['required']) ? 'required' : '';
                     $placeholder = $campo['placeholder'] ?? '';
                     $value = old($name, $campo['value'] ?? '');
                     $multiple = !empty($campo['multiple']);
-                    $accept = $campo['accept'] ?? 'image/*';
                     $id = Str::slug($name, '_');
                 @endphp
 
                 <div class="mb-3">
                     <label for="{{ $id }}" class="form-label fw-semibold" style="color: var(--color-secundario);">
                         {{ $label }}
-                        @if ($required) <span class="text-danger">*</span> @endif
                     </label>
 
+                    {{-- Campo SELECT --}}
                     @if ($type === 'select')
                         <select
                             id="{{ $id }}"
                             name="{{ $name }}"
                             class="form-select"
-                            {{ $required }}
                         >
                             <option value="">{{ $placeholder ?: 'Seleccione una opción' }}</option>
                             @foreach (($campo['options'] ?? []) as $optionValue => $optionText)
@@ -50,29 +47,26 @@
                             @endforeach
                         </select>
 
+                    {{-- Campo TEXTAREA --}}
                     @elseif ($type === 'textarea')
                         <textarea
                             id="{{ $id }}"
                             name="{{ $name }}"
                             class="form-control"
                             placeholder="{{ $placeholder }}"
-                            rows="{{ $campo['rows'] ?? 4 }}"
-                            cols="{{ $campo['cols'] ?? 50 }}"
-                            {{ $required }}
                         >{{ $value }}</textarea>
 
+                    {{-- Campo FILE --}}
                     @elseif ($type === 'file')
                         <input
                             type="file"
                             id="{{ $id }}"
                             name="{{ $name }}{{ $multiple ? '[]' : '' }}"
                             class="form-control"
-                            accept="{{ $accept }}"
-                            {{ $required }}
                             {{ $multiple ? 'multiple' : '' }}
                         >
 
-                        {{-- Vista previa solo si es campo imagen simple --}}
+                        {{-- Vista previa solo para campo "imagen" --}}
                         @if ($name === 'imagen')
                             <div id="preview-wrapper" class="position-relative mt-3" style="display: none;">
                                 <button type="button" id="clear-preview" class="btn-close position-absolute top-0 end-0 m-2" aria-label="Cerrar" onclick="clearPreview()"></button>
@@ -80,6 +74,7 @@
                             </div>
                         @endif
 
+                    {{-- Campo INPUT normal --}}
                     @else
                         <input
                             type="{{ $type }}"
@@ -88,9 +83,13 @@
                             class="form-control"
                             placeholder="{{ $placeholder }}"
                             value="{{ $value }}"
-                            {{ $required }}
                         >
                     @endif
+
+                    {{-- Muestra error específico del campo --}}
+                    @error($name)
+                        <div class="text-danger mt-1 small">{{ $message }}</div>
+                    @enderror
                 </div>
             @endforeach
 
@@ -98,7 +97,7 @@
                 <button type="submit" class="btn btn-primary">
                     {{ $textoBoton ?? 'Guardar' }}
                 </button>
-                <a href="{{ $rutaVolver }}" class="btn btn-outline-secondary">
+                <a href="{{ $rutaVolver }}" class="btn btn-outline-secondary ms-2">
                     Volver
                 </a>
             </div>
@@ -106,3 +105,33 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function previewImagen(event) {
+    const input = event.target;
+    const wrapper = document.getElementById('preview-wrapper');
+    const preview = document.getElementById('preview');
+    const file = input.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            wrapper.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function clearPreview() {
+    const input = document.getElementById('imagen');
+    const preview = document.getElementById('preview');
+    const wrapper = document.getElementById('preview-wrapper');
+
+    input.value = '';
+    preview.src = '#';
+    wrapper.style.display = 'none';
+}
+</script>
+@endpush
