@@ -52,50 +52,41 @@
 
 <div class="card shadow border-0 mb-4" style="background-color: rgba(255,255,255,0.05);">
     <div class="card-body">
-            @if (isset($columnas) && is_array($columnas))
-            <div class="row g-2 border-bottom pb-2 mb-3 px-2 py-1 rounded" style="background-color: var(--color-indigo-dark) !important; color: #fff; font-weight: bold;">
-            @foreach ($columnas as $columna)
-                <div class="col">{{ $columna }}</div>
-            @endforeach
-                <div class="col text-end">Acciones</div>
-            </div>
-        @endif
-
-        @foreach ($items as $item)
-            <div class="row g-2 align-items-center border-bottom py-2 px-2" style="color: var(--color-texto);">
-                {!! $renderFila($item) !!}
-                <div class="col text-end">
-                    @if (isset($rutaEditar))
-                        <a href="{{ route($rutaEditar, $item) }}" 
-                           class="btn btn-sm d-inline-flex align-items-center justify-content-center" 
-                           style="background-color: var(--color-secundario); border: none; color: var(--color-terciario);"
-                           data-bs-toggle="tooltip" data-bs-placement="top" title="Editar">
-                            <i class="fas fa-pen"></i>
-                        </a>
-                    @endif
-                </div>
-            </div>
-        @endforeach
+        <div id="tabla-items">
+            @include('base.partials.tabla', [
+                'items' => $items,
+                'columnas' => $columnas,
+                'renderFila' => $renderFila,
+                'rutaEditar' => $rutaEditar ?? null
+            ])
+        </div>
     </div>
+</div>
 @endsection
 @push('scripts')
 <script>
-$(document).ready(function () {
-    $(document).on('click', '#tabla-items .pagination a', function(e) {
-        e.preventDefault();
-        let url = $(this).attr('href');
-        $.ajax({
-            url: url,
-            type: 'GET',
-            dataType: 'html',
-            success: function(data) {
-                $('#tabla-items').html(data);
-            },
-            error: function() {
-                alert('Error al cargar los datos.');
-            }
+    $(document).ready(function () {
+        $(document).on('click', '.pagination a', function (e) {
+            e.preventDefault();
+            let url = $(this).attr('href');
+            $.ajax({
+                url: url,
+                type: 'GET',
+                beforeSend: function() {
+                    $('#tabla-items').html('<div class="text-center py-4"><div class="spinner-border" role="status" style="color: var(--color-indigo-light);"><span class="visually-hidden">Cargando...</span></div></div>');
+                },
+                success: function (data) {
+                    $('#tabla-items').html(data);
+                    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+                    tooltipTriggerList.map(function (tooltipTriggerEl) {
+                        return new bootstrap.Tooltip(tooltipTriggerEl)
+                    })
+                },
+                error: function () {
+                    alert('Error al cargar la página.');
+                }
+            });
         });
     });
-});
 </script>
 @endpush

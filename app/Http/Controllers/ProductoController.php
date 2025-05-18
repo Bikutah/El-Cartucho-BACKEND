@@ -1,6 +1,7 @@
 <?php
 
 namespace App\Http\Controllers;
+
 use App\Models\Producto;
 use Illuminate\Http\Request;
 use App\Models\Categoria;
@@ -11,6 +12,7 @@ use App\Http\Resources\ProductoResource;
 
 class ProductoController extends Controller
 {
+
     public function index(Request $request)
     {
         $query = Producto::with(['categoria', 'imagenes']);
@@ -23,7 +25,6 @@ class ProductoController extends Controller
             $query->where('stock', 'like', '%' . $request->stock . '%');
         }
 
-
         if ($request->filled('categoria')) {
             $query->whereHas('categoria', function ($q) use ($request) {
                 $q->where('nombre', 'like', '%' . $request->categoria . '%');
@@ -35,10 +36,71 @@ class ProductoController extends Controller
         if ($request->ajax()) {
             return view('base.partials.tabla', [
                 'items' => $productos,
-                'columnas' => ['Id', 'Nombre', 'Descripción', 'PrecioUnitario', 'Stock', 'Categoría', 'Imagen'],
+                'columnas' => ['Id', 'Nombre', 'Descripción', 'PrecioUnitario', 'Stock', 'Categoría'],
                 'rutaEditar' => 'productos.edit',
                 'renderFila' => function ($producto) {
-                    // tu código de render fila
+                    $html = '
+                        <div class="col">' . e($producto->id) . '</div>
+                        <div class="col">' . e($producto->nombre) . '</div>
+                        <div class="col">' . e($producto->descripcion) . '</div>
+                        <div class="col">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
+                        <div class="col">' . e($producto->stock) . '</div>
+                        <div class="col">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>
+                    ';
+
+                    $modalHtml = '';
+
+                    if ($producto->imagenes->isNotEmpty()) {
+                        $modalHtml .= '
+                            <div class="modal fade" id="imagenesModal' . $producto->id . '" tabindex="-1" role="dialog" aria-labelledby="imagenesModalLabel' . $producto->id . '" aria-hidden="true">
+                                <div class="modal-dialog modal-lg modal-dialog-centered" role="document">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-primary text-white">
+                                            <h5 class="modal-title">
+                                                <i class="fas fa-images mr-2"></i>Imágenes de ' . e($producto->nombre) . '
+                                            </h5>
+                                            <button type="button" class="close text-white" data-dismiss="modal" aria-label="Cerrar">
+                                                <span aria-hidden="true">&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body p-0">
+                                            <div id="carousel' . $producto->id . '" class="carousel slide" data-ride="carousel">
+                                                <ol class="carousel-indicators">';
+                        foreach ($producto->imagenes as $index => $imagen) {
+                            $modalHtml .= '<li data-target="#carousel' . $producto->id . '" data-slide-to="' . $index . '" ' . ($index === 0 ? 'class="active"' : '') . '></li>';
+                        }
+                        $modalHtml .= '</ol>
+                                                <div class="carousel-inner">';
+                        foreach ($producto->imagenes as $index => $imagen) {
+                            $modalHtml .= '
+                                                    <div class="carousel-item ' . ($index === 0 ? 'active' : '') . '">
+                                                        <img src="' . e($imagen->url) . '" class="d-block w-100" alt="Imagen de ' . e($producto->nombre) . '">
+                                                        <div class="carousel-caption d-none d-md-block bg-dark bg-opacity-50 rounded py-1">
+                                                            <p class="mb-0">Imagen ' . ($index + 1) . ' de ' . $producto->imagenes->count() . '</p>
+                                                        </div>
+                                                    </div>';
+                        }
+                        $modalHtml .= '
+                                                </div>
+                                                <a class="carousel-control-prev" href="#carousel' . $producto->id . '" role="button" data-slide="prev">
+                                                    <span class="carousel-control-prev-icon" aria-hidden="true"></span>
+                                                    <span class="sr-only">Anterior</span>
+                                                </a>
+                                                <a class="carousel-control-next" href="#carousel' . $producto->id . '" role="button" data-slide="next">
+                                                    <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                                                    <span class="sr-only">Siguiente</span>
+                                                </a>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-dismiss="modal">Cerrar</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>';
+                    }
+
+                    return $html . $modalHtml;
                 }
             ])->render();
         }
@@ -46,6 +108,8 @@ class ProductoController extends Controller
         $categorias = Categoria::orderBy('nombre')->get();
         return view('producto.producto_listar', compact('productos', 'categorias'));
     }
+
+
 
 
     public function create()
@@ -96,12 +160,10 @@ class ProductoController extends Controller
             'imagenes.*.mimes' => 'Las imágenes deben ser de tipo jpeg, png, jpg o gif.',
             'imagenes.*.max' => 'Cada imagen no puede superar los 2MB.',
         ]);
-        
+
         $data = $request->except('imagenes');
 
         $producto = Producto::create($data);
-
-        \Log::info('Imágenes recibidas:', $request->file('imagenes'));
 
         foreach ($request->file('imagenes') as $uploadedFile) {
             $timestamp = time();
@@ -183,7 +245,7 @@ class ProductoController extends Controller
         $producto = Producto::findOrFail($id);
         $producto->update($request->all());
 
-        return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente'); 
+        return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente');
     }
 
     public function buscar(Request $request)

@@ -1,7 +1,3 @@
-/**
- * Scripts personalizados para la aplicación
- */
-
 document.addEventListener('DOMContentLoaded', function() {
     // Inicializar tooltips
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
@@ -44,20 +40,3 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
-
-/**
- * Función para mostrar una vista previa de la imagen seleccionada
- * @param {HTMLInputElement} input - El input de tipo file
- * @param {string} previewId - El ID del elemento donde se mostrará la vista previa
- */
-function previewImage(input, previewId) {
-    const preview = document.getElementById(previewId);
-    if (input.files && input.files[0]) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            preview.src = e.target.result;
-            preview.style.display = 'block';
-        }
-        reader.readAsDataURL(input.files[0]);
-    }
-}

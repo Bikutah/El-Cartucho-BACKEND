@@ -48,10 +48,8 @@
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button"
                data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="me-2 d-none d-md-inline-block"> Usuario: {{ auth()->user()->name }}</span>
-                <div class="profile-circle">
-                    
-                </div>
+                <span class="me-2 d-none d-md-inline-block badge" style="background-color: var(--color-indigo-light-hover)"> Usuario: {{ auth()->user()->name }}</span>
+                <div class="profile-circle"></div>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
                 <li>
