@@ -27,4 +27,9 @@ class Producto extends Model
     {
         return $this->belongsTo(Categoria::class);
     }
+
+    public function getPrimeraImagenAttribute()
+    {
+        return $this->imagenes()->first();
+    }
 }

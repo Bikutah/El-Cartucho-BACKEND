@@ -9,11 +9,22 @@ class CategoriaController extends Controller
     /**
      * Display a listing of the resource.
      */
-    public function index()
+    public function index(Request $request)
     {
-        $categorias = Categoria::paginate(10); 
+        $query = Categoria::query();
 
-        if (request()->ajax()) {
+        // Filtros dinámicos
+        if ($request->filled('nombre')) {
+            $query->where('nombre', 'like', '%' . $request->nombre . '%');
+        }
+
+        if ($request->filled('descripcion')) {
+            $query->where('descripcion', 'like', '%' . $request->descripcion . '%');
+        }
+
+        $categorias = $query->paginate(10)->withQueryString();
+
+        if ($request->ajax()) {
             return view('base.partials.tabla', [
                 'items' => $categorias,
                 'columnas' => ['Id', 'Nombre', 'Descripción'],
@@ -28,6 +39,7 @@ class CategoriaController extends Controller
 
         return view('categoria.categoria_listar', compact('categorias'));
     }
+
 
 
     /**

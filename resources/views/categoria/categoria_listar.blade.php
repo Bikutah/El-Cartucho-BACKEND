@@ -2,6 +2,12 @@
 
 @php
     $titulo = 'Listado de Categorías';
+
+    $filtros = [
+        ['name' => 'nombre', 'placeholder' => 'Buscar por nombre'],
+        ['name' => 'descripcion', 'placeholder' => 'Buscar por descripción'],
+    ];
+
     $rutaCrear = 'categorias.create';
     $rutaEditar = 'categorias.edit';
     $columnas = ['Id', 'Nombre', 'Descripción'];

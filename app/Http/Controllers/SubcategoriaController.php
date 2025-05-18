@@ -8,11 +8,22 @@ use App\Models\Categoria;
 
 class SubcategoriaController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
-        $subcategorias = Subcategoria::with('categoria')->paginate(10); 
+        $query = Subcategoria::with('categoria');
 
-        if (request()->ajax()) {
+        if ($request->filled('nombre')) {
+            $query->where('nombre', 'like', '%' . $request->nombre . '%');
+        }
+
+        if ($request->filled('categoria_id')) {
+            $query->where('categoria_id', $request->categoria_id);
+        }
+
+        $subcategorias = $query->paginate(10)->withQueryString();
+        $categorias = Categoria::orderBy('nombre')->get();
+
+        if ($request->ajax()) {
             return view('base.partials.tabla', [
                 'items' => $subcategorias,
                 'columnas' => ['Id', 'Nombre', 'Categoría'],
@@ -20,12 +31,12 @@ class SubcategoriaController extends Controller
                 'renderFila' => fn($subcategoria) => '
                     <div class="col">' . e($subcategoria->id) . '</div>
                     <div class="col">' . e($subcategoria->nombre) . '</div>
-                    <div class="col">' . e($subcategoria->categoria->nombre ?? 'Sin Categoría') . '</div>
+                    <div class="col">' . e(optional($subcategoria->categoria)->nombre ?? 'Sin Categoría') . '</div>
                 '
             ])->render();
         }
 
-        return view('subcategoria.subcategoria_listar', compact('subcategorias'));
+        return view('subcategoria.subcategoria_listar', compact('subcategorias', 'categorias'));
     }
 
 

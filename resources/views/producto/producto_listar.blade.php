@@ -1,6 +1,18 @@
 @extends('base.listar')
 @php
     $titulo = 'Listado de Productos';
+
+    $filtros = [
+        ['name' => 'nombre', 'placeholder' => 'Buscar por nombre'],
+        ['name' => 'stock', 'placeholder' => 'Stock'],
+        [
+            'name' => 'categoria',
+            'placeholder' => 'Filtrar por categoría',
+            'type' => 'select',
+            'options' => $categorias->pluck('nombre', 'nombre')->toArray()
+        ]
+    ];
+
     $rutaCrear = 'productos.create';
     $rutaEditar = 'productos.edit';
     $columnas = ['Id','Nombre', 'Descripción','Precio','Stock','Categoría','Imagen'];

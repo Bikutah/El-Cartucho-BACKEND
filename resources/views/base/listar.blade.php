@@ -13,6 +13,43 @@
     </a>
 @endif
 
+@if (isset($filtros))
+    <form method="GET" action="{{ request()->url() }}" class="mb-3">
+        <div class="row g-2">
+            @foreach ($filtros as $filtro)
+                <div class="col-md">
+                    @if (isset($filtro['type']) && $filtro['type'] === 'select' && isset($filtro['options']))
+                        <select name="{{ $filtro['name'] }}" class="form-select">
+                            <option value="">{{ $filtro['placeholder'] ?? 'Seleccione una opción' }}</option>
+                            @foreach ($filtro['options'] as $value => $label)
+                                <option value="{{ $value }}" {{ request($filtro['name']) == $value ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
+                            @endforeach
+                        </select>
+                    @else
+                        <input type="text"
+                            name="{{ $filtro['name'] }}"
+                            class="form-control"
+                            placeholder="{{ $filtro['placeholder'] ?? Str::title($filtro['name']) }}"
+                            value="{{ request($filtro['name']) }}">
+                    @endif
+                </div>
+            @endforeach
+
+            <div class="col-md-auto">
+                <button class="btn btn-outline-secondary" type="submit">
+                    <i class="fas fa-search"></i> Buscar
+                </button>
+
+                <a href="{{ request()->url() }}" class="btn btn-outline-danger ms-2">
+                    <i class="fas fa-times"></i> Limpiar
+                </a>
+            </div>
+        </div>
+    </form>
+@endif
+
 <div class="card shadow border-0 mb-4" style="background-color: rgba(255,255,255,0.05);">
     <div class="card-body">
             @if (isset($columnas) && is_array($columnas))
