@@ -51,21 +51,17 @@
     <div class="offcanvas-header">
         <div class="d-flex align-items-center">
             <img src="{{ asset('assets/img/caballero.webp') }}" alt="Logo" class="img-fluid me-2" style="width:28px; height:28px;">
-            <h5 class="offcanvas-title m-0" id="offcanvasSidebarLabel">El Cartucho</h5>
+            <h5 class="offcanvas-title m-0 text-white fw-bold" id="offcanvasSidebarLabel">El Cartucho</h5>
         </div>
         <button type="button" class="btn-close btn-close-white" data-bs-dismiss="offcanvas" aria-label="Close"></button>
     </div>
     <div class="offcanvas-body p-0">
-        <div class="d-flex align-items-center p-3 border-bottom border-secondary">
-            <div class="profile-circle me-2">
-                {{ substr(auth()->user()->name, 0, 1) }}
-            </div>
+        <div class="d-flex align-items-center p-3" style="border-bottom: 1px solid rgba(255, 255, 255, 0.1);">
+            <div class="profile-circle me-2"></div>
             <div>
-                <div class="fw-medium">{{ auth()->user()->name }}</div>
-                <div class="small text-muted">{{ auth()->user()->email }}</div>
+                <span class="me-2 d-md-inline-block badge" style="background-color: var(--color-indigo-light)"> Usuario: {{ auth()->user()->name }}</span>
             </div>
         </div>
-
         <ul class="nav flex-column mt-2">
             <li class="nav-item">
                 <a class="nav-link d-flex align-items-center {{ request()->is('/') ? 'active' : '' }}" href="/">
@@ -73,32 +69,27 @@
                     <span>Dashboard</span>
                 </a>
             </li>
-
             <div class="sidebar-heading">
                 Administración
             </div>
-
             <li class="nav-item">
                 <a class="nav-link d-flex align-items-center {{ request()->is('categorias*') ? 'active' : '' }}" href="{{ route('categorias.index') }}">
                     <i class="fas fa-tags me-2"></i>
                     <span>Categorías</span>
                 </a>
             </li>
-
             <li class="nav-item">
                 <a class="nav-link d-flex align-items-center {{ request()->is('subcategorias*') ? 'active' : '' }}" href="{{ route('subcategorias.index') }}">
                     <i class="fas fa-tag me-2"></i>
                     <span>Subcategorías</span>
                 </a>
             </li>
-
             <li class="nav-item">
                 <a class="nav-link d-flex align-items-center {{ request()->is('productos*') ? 'active' : '' }}" href="{{ route('productos.index') }}">
                     <i class="fas fa-box me-2"></i>
                     <span>Productos</span>
                 </a>
             </li>
-
         </ul>
         <div class="mt-4 px-3">
             <a class="nav-link d-flex align-items-center text-danger" href="#" 

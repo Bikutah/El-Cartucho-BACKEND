@@ -39,11 +39,6 @@ class ProductoSeeder extends Seeder
             // ...podés seguir agregando más si querés cubrir todas las categorías...
         ];
 
-        $imagenes = [
-            ['url' => 'https://via.placeholder.com/100x100.png?text=Retro1', 'public_id' => 'img1'],
-            ['url' => 'https://via.placeholder.com/100x100.png?text=Retro2', 'public_id' => 'img2'],
-            ['url' => 'https://via.placeholder.com/100x100.png?text=Retro3', 'public_id' => 'img3'],
-        ];
 
         $categorias = Categoria::all();
 
@@ -53,15 +48,11 @@ class ProductoSeeder extends Seeder
             ];
 
             foreach ($productos as $producto) {
-                $imagen = $imagenes[array_rand($imagenes)];
-
                 Producto::create([
                     'nombre' => $producto['nombre'],
                     'descripcion' => $producto['descripcion'],
                     'precioUnitario' => mt_rand(500, 20000) / 100,
                     'stock' => mt_rand(5, 50),
-                    'image_url' => $imagen['url'],
-                    'image_public_id' => $imagen['public_id'] . '_' . Str::random(5),
                     'categoria_id' => $categoria->id,
                 ]);
             }

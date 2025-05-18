@@ -25,28 +25,11 @@
     <!-- Bootstrap 5 JS Bundle -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
 
+    <!-- jQuery -->
+    <script src="{{ asset('assets/js/jquery-3.7.1.min.js') }}" crossorigin="anonymous"></script>
+
     <!-- Scripts personalizados -->
     <script src="{{ asset('assets/js/scripts.js') }}"></script>
-
-    <!-- Script para inicializar tooltips y marcar enlaces activos -->
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Inicializar todos los tooltips
-            var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-            var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-                return new bootstrap.Tooltip(tooltipTriggerEl);
-            });
-            
-            // Marcar el enlace activo en la navegación
-            const currentPath = window.location.pathname;
-            document.querySelectorAll('.sidebar .nav-link, .offcanvas-sidebar-custom .nav-link').forEach(link => {
-                if (link.getAttribute('href') === currentPath) {
-                    link.classList.add('active');
-                }
-            });
-        });
-    </script>
-
     @stack('scripts')
 </body>
 </html>
