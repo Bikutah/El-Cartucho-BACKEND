@@ -118,8 +118,7 @@ class ProductoController extends Controller
 
             $signature = hash('sha256', "folder=productos&timestamp=$timestamp$apiSecret");
 
-            $response = Http::withoutVerifying()
-                ->asMultipart()
+            $response = Http::asMultipart()
                 ->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
                     [
                         'name'     => 'file',

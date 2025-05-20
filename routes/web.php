@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\SubcategoriaController;
+use App\Http\Controllers\ImagenController;
 
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -26,6 +27,8 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
 
     Route::resource('subcategorias', SubcategoriaController::class);
+
+    Route::delete('/imagenes/{imagen}', [ImagenController::class, 'destroy'])->name('imagenes.destroy');
 });
 
 
