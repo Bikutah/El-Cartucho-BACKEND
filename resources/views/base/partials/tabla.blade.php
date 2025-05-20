@@ -21,11 +21,11 @@
                     </a>
                 @endif
                 @if (method_exists($item, 'imagenes') && $item->imagenes && $item->imagenes->isNotEmpty())
-                    <button type="button" class="btn btn-sm btn-primary"
-                            data-toggle="modal" data-target="#imagenesModal{{ $item->id }}"
-                            data-bs-toggle="tooltip" data-bs-placement="top" title="Ver imágenes">
+                    <a href="{{ route('productos.imagenes', $item->id) }}"
+                    class="btn btn-sm btn-primary"
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Ver imágenes">
                         <i class="fas fa-images"></i>
-                    </button>
+                    </a>
                 @else
                     <span class="badge bg-secondary">Sin imagen</span>
                 @endif

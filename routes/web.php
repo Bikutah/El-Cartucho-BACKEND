@@ -21,6 +21,9 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::resource('categorias', CategoriaController::class);
 
     Route::resource('productos', ProductoController::class);
+    
+    Route::get('/productos/{producto}/imagenes', [ProductoController::class, 'verImagenes'])->name('productos.imagenes');
+
 
     Route::resource('subcategorias', SubcategoriaController::class);
 });
