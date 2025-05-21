@@ -19,15 +19,12 @@
                 @php
                     $url = url(implode('/', array_slice($segments, 0, $index + 1)));
                     $isLast = $loop->last;
-
-                    // Capitalizar el nombre y hacer que se vea más bonito
                     $name = match ($segment) {
                         'create' => 'Crear',
                         'edit' => 'Editar',
                         default => ucfirst(str_replace('-', ' ', $segment))
                     };
 
-                    // Agregar el nombre de la entidad si es create/edit
                     if (in_array($segment, ['create', 'edit']) && $index >= 1) {
                         $entity = ucfirst(str_replace('-', ' ', $segments[$index - 1]));
                         $name .= " $entity";
@@ -48,7 +45,7 @@
         <li class="nav-item dropdown">
             <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button"
                data-bs-toggle="dropdown" aria-expanded="false">
-                <span class="me-2 d-none d-md-inline-block badge" style="background-color: var(--color-indigo-light-hover)"> Usuario: {{ auth()->user()->name }}</span>
+                <span class="me-2 d-none d-md-inline-block badge" style="background-color: var(--color-indigo-dark)"> Usuario: {{ auth()->user()->name }}</span>
                 <div class="profile-circle"></div>
             </a>
             <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">

@@ -40,15 +40,22 @@ class ProductoController extends Controller
                 'rutaEditar' => 'productos.edit',
                 'renderFila' => function ($producto) {
                     $html = '
-                    <div class="col">' . e($producto->id) . '</div>
-                    <div class="col">' . e($producto->nombre) . '</div>
-                    <div class="col">' . e($producto->descripcion) . '</div>
-                    <div class="col">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
-                    <div class="col">' . e($producto->stock) . '</div>
-                    <div class="col">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>';
-
+                        <div class="col">' . e($producto->id) . '</div>
+                        <div class="col">' . e($producto->nombre) . '</div>
+                        <div class="col">' . e($producto->descripcion) . '</div>
+                        <div class="col">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
+                        <div class="col">' . e($producto->stock) . '</div>
+                        <div class="col">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>
+                        <div class="col">
+                            <a href="' . route('productos.imagenes', $producto) . '" class="btn btn-primary"
+                            data-bs-toggle="tooltip" data-bs-placement="top" title="Ver imágenes">
+                                <i class="fas fa-images"></i>
+                                <span class="badge bg-light text-dark">' . count($producto->imagenes) . '</span>
+                            </a>
+                        </div>';
                     return $html;
                 }
+
             ])->render();
         }
 
@@ -72,7 +79,7 @@ class ProductoController extends Controller
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',
             'imagenes' => 'required|array|min:1|max:5',
-            'imagenes.*' => 'image|mimes:jpeg,png,jpg,gif|max:2048',
+            'imagenes.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ], [
             // nombre
             'nombre.required' => 'El nombre del producto es obligatorio.',
