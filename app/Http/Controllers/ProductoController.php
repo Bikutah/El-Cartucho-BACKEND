@@ -8,6 +8,7 @@ use App\Models\Categoria;
 use Cloudinary\Cloudinary;
 use Illuminate\Support\Facades\Http;
 use App\Http\Resources\ProductoResource;
+use Illuminate\Support\Str;
 
 
 class ProductoController extends Controller
@@ -117,26 +118,31 @@ class ProductoController extends Controller
 
         $producto = Producto::create($data);
 
-        foreach ($request->file('imagenes') as $uploadedFile) {
-            $timestamp = time();
+        $slugNombre = Str::slug($producto->nombre); 
+        $timestamp = time(); 
+
+        foreach ($request->file('imagenes') as $index => $uploadedFile) {
             $cloudName = config('cloudinary.cloud.cloud_name');
             $apiKey = config('cloudinary.cloud.api_key');
             $apiSecret = config('cloudinary.cloud.api_secret');
+            $folder = 'productos';
+            $publicId = "{$slugNombre}_{$producto->id}_{$index}_{$timestamp}";
 
-            $signature = hash('sha256', "folder=productos&timestamp=$timestamp$apiSecret");
+            $params_to_sign = "folder={$folder}&public_id={$publicId}&timestamp={$timestamp}{$apiSecret}";
+            $signature = hash('sha256', $params_to_sign);
 
-            $response = Http::asMultipart()
-                ->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
-                    [
-                        'name'     => 'file',
-                        'contents' => fopen($uploadedFile->getRealPath(), 'r'),
-                        'filename' => $uploadedFile->getClientOriginalName(),
-                    ],
-                    ['name' => 'api_key', 'contents' => $apiKey],
-                    ['name' => 'timestamp', 'contents' => $timestamp],
-                    ['name' => 'folder', 'contents' => 'productos'],
-                    ['name' => 'signature', 'contents' => $signature],
-                ]);
+            $response = Http::asMultipart()->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
+                [
+                    'name'     => 'file',
+                    'contents' => fopen($uploadedFile->getRealPath(), 'r'),
+                    'filename' => $uploadedFile->getClientOriginalName(),
+                ],
+                ['name' => 'api_key', 'contents' => $apiKey],
+                ['name' => 'timestamp', 'contents' => $timestamp],
+                ['name' => 'folder', 'contents' => $folder],
+                ['name' => 'public_id', 'contents' => $publicId],
+                ['name' => 'signature', 'contents' => $signature],
+            ]);
 
             if (!$response->successful()) {
                 return back()->withErrors(['imagenes' => 'Error al subir una de las imágenes.']);
@@ -149,6 +155,7 @@ class ProductoController extends Controller
                 'imagen_public_id' => $result['public_id'],
             ]);
         }
+
 
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
     }
@@ -208,7 +215,7 @@ class ProductoController extends Controller
 
     public function verImagenes(Producto $producto)
     {
-        $imagenes = $producto->imagenes; 
+        $imagenes = $producto->imagenes;
         return view('producto.producto_imagenes', compact('producto', 'imagenes'));
     }
 }
