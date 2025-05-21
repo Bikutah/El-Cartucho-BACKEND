@@ -30,13 +30,4 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     });
     
-    // Confirmar eliminación
-    const deleteButtons = document.querySelectorAll('.btn-delete');
-    deleteButtons.forEach(button => {
-        button.addEventListener('click', function(e) {
-            if (!confirm('¿Está seguro que desea eliminar este elemento?')) {
-                e.preventDefault();
-            }
-        });
-    });
 });
