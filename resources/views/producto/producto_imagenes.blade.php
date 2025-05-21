@@ -4,7 +4,7 @@
     <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3 mb-4 fw-bold" style="color: var(--color-primario);">Imágenes del Producto</h1>
+                <h1 class="h3 mb-4 fw-bold" style="color: var(--color-primario);"> <i class="bi bi-images"></i> {{ $producto->nombre }} &gt; imágenes</h1>
                 <a href="{{ route('productos.index') }}" class="mb-4 btn-back d-flex align-items-center">
                     <i class="fas fa-arrow-left me-2"></i> Volver
                 </a>
