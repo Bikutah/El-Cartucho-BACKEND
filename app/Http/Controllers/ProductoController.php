@@ -75,7 +75,7 @@ class ProductoController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'descripcion' => 'required|string|max:255',
+            'descripcion' => 'required|string|max:500',
             'precioUnitario' => 'required|numeric',
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',
@@ -90,7 +90,7 @@ class ProductoController extends Controller
             // descripcion
             'descripcion.required' => 'La descripción es obligatoria.',
             'descripcion.string' => 'La descripción debe ser una cadena de texto.',
-            'descripcion.max' => 'La descripción no puede tener más de 255 caracteres.',
+            'descripcion.max' => 'La descripción no puede tener más de 500 caracteres.',
 
             // precioUnitario
             'precioUnitario.required' => 'El precio unitario es obligatorio.',
@@ -180,7 +180,7 @@ class ProductoController extends Controller
     {
         $request->validate([
             'nombre' => 'required|string|max:255',
-            'descripcion' => 'required|string|max:255',
+            'descripcion' => 'required|string|max:500',
             'precioUnitario' => 'required|numeric',
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',

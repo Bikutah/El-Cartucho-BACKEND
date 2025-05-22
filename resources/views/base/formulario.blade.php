@@ -54,8 +54,12 @@
                             name="{{ $name }}"
                             class="form-control"
                             placeholder="{{ $placeholder }}"
+                            style="min-height: 230px;"
+                            oninput="actualizarContador('{{ $id }}', 500)"
                         >{{ $value }}</textarea>
-
+                            <div class="form-text text-end">
+                                <span id="contador-{{ $id }}">0</span>/500 caracteres
+                            </div>
                     {{-- Campo FILE --}}
                     @elseif ($type === 'file')
                         <input
@@ -108,6 +112,13 @@
 
 @push('scripts')
 <script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('textarea').forEach(function(textarea) {
+        const id = textarea.id;
+        const max = 500; 
+        actualizarContador(id, max);
+    });
+});    
 function previewImagen(event) {
     const input = event.target;
     const wrapper = document.getElementById('preview-wrapper');
@@ -132,6 +143,21 @@ function clearPreview() {
     input.value = '';
     preview.src = '#';
     wrapper.style.display = 'none';
+}
+
+function actualizarContador(id, max) {
+    const textarea = document.getElementById(id);
+    const contador = document.getElementById('contador-' + id);
+    const longitud = textarea.value.length;
+
+    contador.textContent = longitud;
+
+    if (longitud > max) {
+        contador.classList.add('text-danger', 'fw-semibold');
+    } else {
+        contador.classList.remove('text-danger', 'fw-semibold');
+    }
+
 }
 </script>
 @endpush
