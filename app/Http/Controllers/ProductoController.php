@@ -37,14 +37,22 @@ class ProductoController extends Controller
         if ($request->ajax()) {
             return view('base.partials.tabla', [
                 'items' => $productos,
-                'columnas' => ['Id', 'Nombre', 'Descripción', 'PrecioUnitario', 'Stock', 'Categoría', 'Imágenes'],
+                'columnas' => [
+                    ['label' => 'Id'],
+                    ['label' => 'Nombre'],
+                    ['label' => 'Descripción', 'class' => 'd-none d-md-block'],
+                    ['label' => 'Precio', 'class' => 'd-none d-md-block'],
+                    ['label' => 'Stock'],
+                    ['label' => 'Categoría'],
+                    ['label' => 'Imágenes']
+                ],
                 'rutaEditar' => 'productos.edit',
                 'renderFila' => function ($producto) {
                     $html = '
                         <div class="col">' . e($producto->id) . '</div>
-                        <div class="col">' . e($producto->nombre) . '</div>
-                        <div class="col">' . e($producto->descripcion) . '</div>
-                        <div class="col">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
+                        <div class="col text-truncate-responsive" title="' . e($producto->nombre) . '">' . e($producto->nombre) . '</div>
+                        <div class="col d-none d-md-block">' . e($producto->descripcion) . '</div>
+                        <div class="col d-none d-md-block">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
                         <div class="col">' . e($producto->stock) . '</div>
                         <div class="col">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>
                         <div class="col">
@@ -56,9 +64,9 @@ class ProductoController extends Controller
                         </div>';
                     return $html;
                 }
-
             ])->render();
         }
+
 
         $categorias = Categoria::orderBy('nombre')->get();
         return view('producto.producto_listar', compact('productos', 'categorias'));

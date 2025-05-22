@@ -926,6 +926,19 @@ h6 {
 }
 
 
+.text-truncate-mobile {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (min-width: 768px) {
+    .text-truncate-mobile {
+        white-space: normal;
+        overflow: visible;
+        text-overflow: unset;
+    }
+}
 
 
 
