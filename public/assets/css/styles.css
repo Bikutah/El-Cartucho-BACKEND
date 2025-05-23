@@ -767,183 +767,487 @@ h6 {
 }
 
 /* Estilos del carrusel usando la paleta personalizada */
-.carousel {
-    position: relative;
+/* Galería responsiva para pantallas 2K y 4K */
+.gallery-card {
+  max-width: 100%;
+  margin: 0 auto;
+}
+
+.gallery-carousel {
+  position: relative;
 }
 
 .carousel-item {
-    transition: transform 0.5s ease, opacity 0.5s ease;
+  transition: transform 0.5s ease, opacity 0.5s ease;
 }
 
+/* Contenedor principal de imagen adaptativo */
 .main-image-container {
-    background-color: var(--color-bg-secondary);
-    height: 500px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  background-color: var(--color-bg-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 1rem;
+  overflow: hidden;
+  /* Altura adaptativa según resolución */
+  height: 60vh;
+  min-height: 400px;
+  max-height: 800px;
 }
 
-/* Controles del carrusel */
+.main-image {
+  max-height: 100%;
+  max-width: 100%;
+  object-fit: contain;
+  transition: transform 0.3s ease;
+}
+
+/* Controles del carrusel mejorados */
 .control-button {
-    background-color: rgba(255, 255, 255, 0.8);
-    border-radius: 50%;
-    width: 3rem;
-    height: 3rem;
-    top: 50%;
-    transform: translateY(-50%);
-    opacity: 0;
-    transition: opacity 0.3s ease, background-color 0.3s ease;
-    margin: 0 1rem;
+  background-color: rgba(255, 255, 255, 0.9);
+  border-radius: 50%;
+  border: none;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  z-index: 5;
 }
 
 .carousel:hover .control-button {
-    opacity: 1;
+  opacity: 1;
 }
 
 .control-button:hover {
-    background-color: white;
+  background-color: white;
+  transform: translateY(-50%) scale(1.1);
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .carousel-control-prev-icon,
 .carousel-control-next-icon {
-    filter: invert(1) grayscale(100);
+  filter: invert(1) grayscale(100);
 }
 
-/* Miniaturas */
+/* Miniaturas adaptativas */
 .thumbnails-container {
-    padding: 0.5rem 0;
+  padding: 1rem 0;
+  max-width: 100%;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-indigo-light) transparent;
+}
+
+.thumbnails-container::-webkit-scrollbar {
+  height: 6px;
+}
+
+.thumbnails-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.thumbnails-container::-webkit-scrollbar-thumb {
+  background-color: var(--color-indigo-light);
+  border-radius: 3px;
 }
 
 .thumbnail-wrapper {
-    position: relative;
-    transition: transform 0.2s ease;
+  position: relative;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
 }
 
 .thumbnail-wrapper:hover {
-    transform: translateY(-2px);
+  transform: translateY(-3px);
 }
 
 .thumbnail {
-    width: 100px;
-    height: 75px;
-    border-radius: 0.5rem;
-    object-fit: cover;
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: all 0.2s ease;
-    opacity: 0.7;
+  border-radius: 0.75rem;
+  object-fit: cover;
+  cursor: pointer;
+  border: 3px solid transparent;
+  transition: all 0.3s ease;
+  opacity: 0.7;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .thumbnail:hover {
-    opacity: 1;
+  opacity: 1;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
 }
 
 .thumbnail.active {
-    border-color: var(--color-indigo-light);
-    opacity: 1;
-    box-shadow: 0 0 0 3px rgba(35, 33, 98, 0.3);
+  border-color: var(--color-indigo-light);
+  opacity: 1;
+  box-shadow: 0 0 0 4px rgba(35, 33, 98, 0.3);
 }
 
-/* Botón de volver mejorado */
-.btn-back {
-    color: #fff;
-    font-weight: 500;
-    text-decoration: none;
-    padding: 0.5rem 0.75rem;
-    border-radius: 0.375rem;
-    transition: all 0.2s ease;
-    background-color: var(--color-indigo-dark);
-    border: 1px solid var(--color-border);
-    font-size: 0.875rem;
-}
-
-.btn-back:hover {
-    background-color: var(--color-indigo-dark-hover);
-    translate: 0px -1px;
-}
-
-/* Botón de eliminar estilo shadcn */
+/* Botón de eliminar mejorado */
 .btn-delete {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.375rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    height: 2.25rem;
-    padding-left: 1rem;
-    padding-right: 1rem;
-    background-color: rgba(239, 68, 68, 0.9);
-    color: white;
-    border: none;
-    box-shadow: 0 2px 10px rgba(239, 68, 68, 0.3);
-    transition: all 0.2s ease;
-    opacity: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.5rem;
+  font-weight: 500;
+  background-color: rgba(239, 68, 68, 0.9);
+  color: white;
+  border: none;
+  box-shadow: 0 3px 12px rgba(239, 68, 68, 0.4);
+  transition: all 0.3s ease;
+  opacity: 0;
+  backdrop-filter: blur(10px);
 }
 
 .carousel-item:hover .btn-delete {
-    opacity: 1;
+  opacity: 1;
 }
 
 .btn-delete:hover {
-    background-color: rgb(239, 68, 68);
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+  background-color: rgb(239, 68, 68);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
 }
 
-/* Estado vacío */
+/* Estado vacío mejorado */
 .empty-state {
-    background-color: rgba(35, 33, 98, 0.1);
-    border-radius: 0.5rem;
-    padding: 3rem 1.5rem;
+  background: linear-gradient(135deg, rgba(35, 33, 98, 0.1), rgba(35, 33, 98, 0.05));
+  border-radius: 1rem;
+  padding: 4rem 2rem;
+  border: 2px dashed rgba(35, 33, 98, 0.2);
 }
 
-/* Responsive */
+/* Responsive para diferentes resoluciones */
+
+/* Pantallas estándar (1080p) */
+@media (max-width: 1920px) {
+  .main-image-container {
+    height: 55vh;
+  }
+
+  .thumbnail {
+    width: 100px;
+    height: 75px;
+  }
+
+  .control-button {
+    width: 3rem;
+    height: 3rem;
+    margin: 0 1rem;
+  }
+
+  .btn-delete {
+    font-size: 0.875rem;
+    height: 2.25rem;
+    padding: 0 1rem;
+  }
+}
+
+/* Pantallas 2K (1440p) */
+@media (min-width: 1921px) and (max-width: 2560px) {
+  .gallery-card {
+    max-width: 85%;
+  }
+
+  .main-image-container {
+    height: 65vh;
+    max-height: 900px;
+  }
+
+  .thumbnail {
+    width: 120px;
+    height: 90px;
+  }
+
+  .control-button {
+    width: 3.5rem;
+    height: 3.5rem;
+    margin: 0 1.5rem;
+  }
+
+  .btn-delete {
+    font-size: 1rem;
+    height: 2.5rem;
+    padding: 0 1.25rem;
+  }
+
+  .thumbnails-container {
+    gap: 1rem !important;
+  }
+}
+
+/* Pantallas 4K (2160p) y superiores */
+@media (min-width: 2561px) {
+  .gallery-card {
+    max-width: 75%;
+  }
+
+  .main-image-container {
+    height: 70vh;
+    max-height: 1200px;
+  }
+
+  .thumbnail {
+    width: 150px;
+    height: 112px;
+    border-radius: 1rem;
+  }
+
+  .control-button {
+    width: 4rem;
+    height: 4rem;
+    margin: 0 2rem;
+  }
+
+  .btn-delete {
+    font-size: 1.125rem;
+    height: 3rem;
+    padding: 0 1.5rem;
+    border-radius: 0.75rem;
+  }
+
+  .thumbnails-container {
+    gap: 1.5rem !important;
+    padding: 1.5rem 0;
+  }
+
+  .card-body {
+    padding: 3rem !important;
+  }
+}
+
+/* Pantallas móviles */
 @media (max-width: 768px) {
-    .main-image-container {
-        height: 350px;
+  .main-image-container {
+    height: 50vh;
+    min-height: 300px;
+  }
+
+  .thumbnail {
+    width: 80px;
+    height: 60px;
+  }
+
+  .control-button {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin: 0 0.5rem;
+  }
+
+  .btn-delete {
+    font-size: 0.75rem;
+    height: 2rem;
+    padding: 0 0.75rem;
+  }
+
+  .btn-delete span {
+    display: none;
+  }
+
+  .btn-delete i {
+    margin-right: 0;
+  }
+
+  .gallery-card {
+    margin: 0 0.5rem;
+  }
+
+  .thumbnails-container {
+    gap: 0.5rem !important;
+  }
+}
+
+/* Pantallas ultrawide */
+@media (min-aspect-ratio: 21 / 9) {
+  .main-image-container {
+    height: 50vh;
+  }
+
+  .gallery-card {
+    max-width: 90%;
+  }
+}
+
+/* Responsive Table Styles with shadcn-inspired design */
+.table-responsive-custom {
+    overflow-x: auto;
+    width: 100%;
+    border-radius: 0.5rem;
+}
+
+/* Desktop View - Standard table layout */
+@media (min-width: 768px) {
+    .table-header {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+        align-items: center;
+        background-color: var(--color-indigo-dark);
+        color: #fff;
+        font-weight: 500;
+        border-radius: 10px;
+        margin-bottom: 0.5rem;
+        padding-inline: 1rem;
+        padding-block: 0.5rem;
     }
 
-    .thumbnail {
-        width: 80px;
-        height: 60px;
+    .table-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+        align-items: center;
+        padding-inline: 1rem;
+        padding-block: 0.5rem;
+        border-bottom: 1px solid var(--color-border);
+        transition: background-color 0.15s ease;
     }
 
-    .btn-delete {
-        font-size: 0.75rem;
-        height: 2rem;
-        padding-left: 0.75rem;
-        padding-right: 0.75rem;
+    .table-cell {
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
-    .btn-delete span {
+    .table-cell.description {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 100%;
+    }
+
+    .table-cell-label {
+        display: none;
+    }
+}
+
+/* Mobile View - Card-like layout */
+@media (max-width: 767.98px) {
+    .table-header {
         display: none;
     }
 
-    .btn-delete i {
-        margin-right: 0;
+    .table-container {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .table-row {
+        display: flex;
+        flex-direction: column;
+        padding: 1rem;
+        border-radius: 0.5rem;
+        background-color: #fff;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--color-border);
+    }
+
+    .table-cell {
+        padding: 0.3rem 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .table-cell-label {
+        font-weight: 500;
+        color: var(--color-text-muted);
+        width: 40%;
+        margin-right: 0.5rem;
+        font-size: 0.875rem;
+    }
+
+    .table-cell.actions {
+        margin-top: 0.75rem;
+        padding-top: 0.75rem;
+        border-top: 1px dashed rgba(0, 0, 0, 0.1);
+        justify-content: flex-end;
+    }
+
+    .table-cell.actions .table-cell-label {
+        display: none;
     }
 }
 
 
-.text-truncate-mobile {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* Action buttons */
+.action-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: max-content;
+    padding: 0.3rem 0.650rem;
+    height: 2rem;
+    border-radius: 0.5rem;
+    background-color: var(--color-indigo-dark);
+    color: #fff;
+    border: 1px solid var(--color-indigo-dark);
+    transition: all 0.15s ease;
+    gap: 0.5rem;
+    text-decoration: none;
 }
 
+.action-btn:hover {
+    background-color: var(--color-indigo-dark-hover);
+    color: #fff;
+    transform: translateY(-1px);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+}
+
+/* Pagination adjustments for mobile */
+@media (max-width: 767.98px) {
+    .pagination-modern {
+        justify-content: center;
+    }
+}
+
+
+/* Estilos para truncar texto */
+.truncate-text {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Clases específicas para limitar a 15 caracteres */
+.truncate-15 {
+  max-width: 15ch; /* Limita a aproximadamente 15 caracteres */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block; /* Importante para que max-width funcione */
+}
+
+/* Clases para diferentes longitudes si las necesitas en el futuro */
+.truncate-10 {
+  max-width: 10ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+.truncate-20 {
+  max-width: 20ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: inline-block;
+}
+
+/* Estilos para mostrar el texto completo en tooltip al hacer hover */
+.truncate-with-tooltip {
+  position: relative;
+}
+
+
+/* Ajustes para la tabla responsiva */
 @media (min-width: 768px) {
-    .text-truncate-mobile {
-        white-space: normal;
-        overflow: visible;
-        text-overflow: unset;
-    }
+  .table-cell.nombre,
+  .table-cell.descripcion {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .table-cell.nombre .truncate-15,
+  .table-cell.descripcion .truncate-15 {
+    width: 100%;
+  }
 }
-
-
-
-
-
-
-
-

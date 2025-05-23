@@ -1,14 +1,14 @@
 @extends('layouts.app')
 
 @section('content')
-<div class="container mt-4">
-    <div class="card shadow-sm border-0 rounded-4 overflow-hidden">
+<div class="container-fluid mt-4 px-4">
+    <div class="card shadow-sm border-0 rounded-4 overflow-hidden gallery-card">
         <div class="card-body p-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h1 class="h3 mb-4 fw-bold" style="color: var(--color-primario);">
+                <h4 class="h4 mb-4 fw-bold" style="color: var(--color-primario);">
                     <i class="bi bi-images"></i> {{ $producto->nombre }} &gt; imágenes
-                </h1>
-                <a href="{{ route('productos.index') }}" class="mb-4 btn-back d-flex align-items-center">
+                </h4>
+                <a href="{{ route('productos.index') }}" class="mb-4 btn btn-primary d-flex align-items-center ">
                     <i class="fas fa-arrow-left me-2"></i> Volver
                 </a>
             </div>
@@ -20,14 +20,13 @@
                     <p class="text-muted">No hay imágenes disponibles para este producto.</p>
                 </div>
             @else
-                <div id="carouselProducto" class="carousel slide mb-4 rounded-4 overflow-hidden shadow-sm" data-bs-ride="carousel" data-bs-touch="true">
+                <div id="carouselProducto" class="carousel slide mb-4 rounded-4 overflow-hidden shadow-sm gallery-carousel" data-bs-ride="carousel" data-bs-touch="true">
                     <div class="carousel-inner rounded-4">
                         @foreach ($imagenes as $index => $imagen)
                             <div class="carousel-item @if($index === 0) active @endif">
                                 <div class="main-image-container position-relative">
                                     <img src="{{ $imagen->imagen_url }}" 
-                                         class="d-block w-100 rounded-4" 
-                                         style="max-height: 500px; object-fit: contain;" 
+                                         class="d-block w-100 rounded-4 main-image" 
                                          alt="Imagen {{ $index + 1 }}">
 
                                     <button type="button" class="btn-delete position-absolute bottom-0 end-0 m-3"
@@ -52,7 +51,7 @@
                     </button>
                 </div>
 
-                <div class="thumbnails-container d-flex justify-content-center gap-2 flex-wrap" id="miniaturas">
+                <div class="thumbnails-container d-flex justify-content-center gap-3 flex-wrap" id="miniaturas">
                     @foreach ($imagenes as $index => $imagen)
                         <div class="thumbnail-wrapper">
                             <img src="{{ $imagen->imagen_url }}"

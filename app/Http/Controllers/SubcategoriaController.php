@@ -28,11 +28,25 @@ class SubcategoriaController extends Controller
                 'items' => $subcategorias,
                 'columnas' => ['Id', 'Nombre', 'Categoría'],
                 'rutaEditar' => 'subcategorias.edit',
-                'renderFila' => fn($subcategoria) => '
-                    <div class="col">' . e($subcategoria->id) . '</div>
-                    <div class="col">' . e($subcategoria->nombre) . '</div>
-                    <div class="col">' . e(optional($subcategoria->categoria)->nombre ?? 'Sin Categoría') . '</div>
-                '
+                'renderFila' => function($subcategoria) {
+                        return '
+                            <div class="table-cell">
+                                <span class="table-cell-label">Id:</span>
+                                <span>' . e($subcategoria->id) . '</span>
+                            </div>
+                            <div class="table-cell nombre">
+                                <span class="table-cell-label">Nombre:</span>
+                                <span class="truncate-15 truncate-with-tooltip" data-full-text="' . e($subcategoria->nombre) . '">' 
+                                    . e($subcategoria->nombre) . 
+                                '</span>
+                            </div>
+                            <div class="table-cell categoria">
+                                <span class="table-cell-label">Categoría:</span>
+                                <span class="truncate-15 truncate-with-tooltip" data-full-text="' . e(optional($subcategoria->categoria)->nombre ?? 'Sin categoría') . '">' 
+                                    . e(optional($subcategoria->categoria)->nombre ?? 'Sin categoría') . 
+                                '</span>
+                            </div>';
+                        }
             ])->render();
         }
 

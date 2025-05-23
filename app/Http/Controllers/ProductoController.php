@@ -48,21 +48,28 @@ class ProductoController extends Controller
                 ],
                 'rutaEditar' => 'productos.edit',
                 'renderFila' => function ($producto) {
-                    $html = '
-                        <div class="col">' . e($producto->id) . '</div>
-                        <div class="col text-truncate-responsive" title="' . e($producto->nombre) . '">' . e($producto->nombre) . '</div>
-                        <div class="col d-none d-md-block">' . e($producto->descripcion) . '</div>
-                        <div class="col d-none d-md-block">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
-                        <div class="col">' . e($producto->stock) . '</div>
-                        <div class="col">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>
-                        <div class="col">
-                            <a href="' . route('productos.imagenes', $producto) . '" class="btn btn-primary"
-                            data-bs-toggle="tooltip" data-bs-placement="top" title="Ver imágenes">
-                                <i class="fas fa-images"></i>
-                                <span class="badge bg-light text-dark">' . count($producto->imagenes) . '</span>
-                            </a>
-                        </div>';
-                    return $html;
+                    return '
+                    <div class="table-cell">' . e($producto->id) . '</div>
+                    <div class="table-cell nombre">
+                        <span class="truncate-15 truncate-with-tooltip" data-full-text="' . e($producto->nombre) . '">'
+                        . e($producto->nombre) .
+                        '</span>
+                    </div>
+                    <div class="table-cell descripcion">
+                        <span class="truncate-15 truncate-with-tooltip" data-full-text="' . e($producto->descripcion) . '">'
+                        . e($producto->descripcion) .
+                        '</span>
+                    </div>
+                    <div class="table-cell">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
+                    <div class="table-cell">' . e($producto->stock) . '</div>
+                    <div class="table-cell">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>
+                    <div class="table-cell">
+                        <a href="' . route('productos.imagenes', $producto) . '" class="action-btn"
+                        data-bs-toggle="tooltip" data-bs-placement="top" title="Ver imágenes">
+                            <i class="fas fa-images"></i>
+                            <span class="badge bg-light text-dark">' . count($producto->imagenes) . '</span>
+                        </a>
+                    </div>';
                 }
             ])->render();
         }
@@ -126,8 +133,8 @@ class ProductoController extends Controller
 
         $producto = Producto::create($data);
 
-        $slugNombre = Str::slug($producto->nombre); 
-        $timestamp = time(); 
+        $slugNombre = Str::slug($producto->nombre);
+        $timestamp = time();
 
         foreach ($request->file('imagenes') as $index => $uploadedFile) {
             $cloudName = config('cloudinary.cloud.cloud_name');
