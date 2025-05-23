@@ -27,13 +27,19 @@
             </div>
             <div class="table-cell nombre">
                 <span class="table-cell-label">Nombre:</span>
-                <span class="truncate-15 truncate-with-tooltip" data-full-text="' . e($categoria->nombre) . '">' 
+                <span class="truncate-15 truncate-with-tooltip"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="' . e($categoria->nombre) . '">' 
                     . e($categoria->nombre) . 
                 '</span>
             </div>
             <div class="table-cell descripcion">
                 <span class="table-cell-label">Descripción:</span>
-                <span class="truncate-15 truncate-with-tooltip" data-full-text="' . e($categoria->descripcion) . '">' 
+                <span class="truncate-15 truncate-with-tooltip"
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="' . e($categoria->descripcion) . '">' 
                     . e($categoria->descripcion) . 
                 '</span>
             </div>';

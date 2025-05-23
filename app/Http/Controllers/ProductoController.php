@@ -51,14 +51,22 @@ class ProductoController extends Controller
                     return '
                     <div class="table-cell">' . e($producto->id) . '</div>
                     <div class="table-cell nombre">
-                        <span class="truncate-15 truncate-with-tooltip" data-full-text="' . e($producto->nombre) . '">'
-                        . e($producto->nombre) .
-                        '</span>
+                        <span class="table-cell-label">Nombre:</span>
+                        <span class="truncate-15 truncate-with-tooltip"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="' . e($producto->nombre) . '">'
+                                . e($producto->nombre) .
+                                '</span>
                     </div>
                     <div class="table-cell descripcion">
-                        <span class="truncate-15 truncate-with-tooltip" data-full-text="' . e($producto->descripcion) . '">'
-                        . e($producto->descripcion) .
-                        '</span>
+                        <span class="table-cell-label">Descripción:</span>
+                        <span class="truncate-15 truncate-with-tooltip"
+                            data-bs-toggle="tooltip"
+                            data-bs-placement="top"
+                            title="' . e($producto->descripcion) . '">'
+                                . e($producto->descripcion) .
+                                '</span>
                     </div>
                     <div class="table-cell">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
                     <div class="table-cell">' . e($producto->stock) . '</div>
