@@ -57,7 +57,8 @@
                 'items' => $items,
                 'columnas' => $columnas,
                 'renderFila' => $renderFila,
-                'rutaEditar' => $rutaEditar ?? null
+                'rutaEditar' => $rutaEditar ?? null,
+                'rutaEliminar' => $rutaEliminar ?? null
             ])
         </div>
     </div>

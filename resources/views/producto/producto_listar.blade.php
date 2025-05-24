@@ -17,6 +17,7 @@
 
     $rutaCrear = 'productos.create';
     $rutaEditar = 'productos.edit';
+    $rutaEliminar = 'productos.destroy';
 
     $columnas = [
         ['label' => 'Id'],

@@ -21,9 +21,10 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
     Route::resource('categorias', CategoriaController::class);
 
+    # Productos
     Route::resource('productos', ProductoController::class);
-    
     Route::get('/productos/{producto}/imagenes', [ProductoController::class, 'verImagenes'])->name('productos.imagenes');
+    Route::delete('productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
 
 
     Route::resource('subcategorias', SubcategoriaController::class);

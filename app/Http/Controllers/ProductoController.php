@@ -241,4 +241,40 @@ class ProductoController extends Controller
         $imagenes = $producto->imagenes;
         return view('producto.producto_imagenes', compact('producto', 'imagenes'));
     }
+
+    public function destroy(Producto $producto)
+    {
+        // Eliminar imágenes de Cloudinary
+        foreach ($producto->imagenes as $imagen) {
+            $cloudName = config('cloudinary.cloud.cloud_name');
+            $apiKey = config('cloudinary.cloud.api_key');
+            $apiSecret = config('cloudinary.cloud.api_secret');
+
+            $timestamp = time();
+            $publicId = $imagen->imagen_public_id;
+
+            $params_to_sign = "public_id={$publicId}&timestamp={$timestamp}{$apiSecret}";
+            $signature = hash('sha256', $params_to_sign);
+
+            $response = Http::asForm()->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/destroy", [
+                'api_key'    => $apiKey,
+                'timestamp'  => $timestamp,
+                'public_id'  => $publicId,
+                'signature'  => $signature,
+            ]);
+
+            // Opcional: verificar respuesta y loguear si falla
+        }
+
+        // Eliminar imágenes en base de datos
+        $producto->imagenes()->delete();
+
+        // Eliminar el producto
+        $producto->delete();
+
+        return redirect()->route('productos.index')->with('success', 'Producto eliminado correctamente.');
+    }
+    
 }
+
+
