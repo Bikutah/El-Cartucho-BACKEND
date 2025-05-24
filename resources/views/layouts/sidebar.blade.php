@@ -43,6 +43,13 @@
                 <span>Productos</span>
             </a>
         </li>
+
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center {{ request()->is('pedidos*') ? 'active' : '' }}" href="{{ route('pedidos.index') }}">
+                <i class="fas fa-shopping-cart me-2"></i>
+                <span>Pedidos</span>
+            </a>
+        </li>
     </ul>
 </aside>
 

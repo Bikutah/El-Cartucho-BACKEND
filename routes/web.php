@@ -6,6 +6,7 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Middleware\AdminMiddleware;
 use App\Http\Controllers\ProductoController;
+use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\SubcategoriaController;
 use App\Http\Controllers\ImagenController;
 
@@ -20,6 +21,8 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::get('/', [HomeController::class, 'home'])->name('home');
 
     Route::resource('categorias', CategoriaController::class);
+
+    Route::resource('pedidos', PedidoController::class);
 
     # Productos
     Route::resource('productos', ProductoController::class);
