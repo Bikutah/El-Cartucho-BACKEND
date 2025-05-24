@@ -1,39 +1,67 @@
-<nav class="navbar navbar-expand navbar-light bg-white topbar mb-4 static-top shadow">
-    <!--<button id="sidebarToggleTop" class="btn btn-link d-lg-none rounded-circle mr-3">
-         <i class="fa fa-bars"></i>
-    </button> -->
-    <!-- Topbar Navbar -->
-    <ul class="navbar-nav ml-auto">
-        <!-- Nav Item - User Information -->
-        <li class="nav-item dropdown no-arrow">
-            <a class="nav-link dropdown-toggle" href="#" id="userDropdown" role="button"
-               data-bs-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                <span class="mr-2 d-none d-lg-inline text-gray-900 small">{{ auth()->user()->name }}</span>
-                <div class="profile-circle-wrapper">
-                    <div class="profile-circle"></div>
-                </div>
+<nav class="navbar navbar-expand py-0 px-4 custom-navbar">
+    <!-- Botón hamburguesa para móviles -->
+    <button class="btn btn-outline-secondary border-0 d-lg-none" type="button" data-bs-toggle="offcanvas" 
+            data-bs-target="#offcanvasSidebar" aria-controls="offcanvasSidebar">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="d-none d-md-block fw-semibold">
+        @php
+            $segments = request()->segments();
+            $count = count($segments);
+        @endphp
+
+        <ol class="breadcrumb mb-0">
+            <li class="breadcrumb-item"><a href="{{ url('/') }}">Inicio</a></li>
+
+            @foreach ($segments as $index => $segment)
+                @php
+                    $url = url(implode('/', array_slice($segments, 0, $index + 1)));
+                    $isLast = $loop->last;
+                    $name = match ($segment) {
+                        'create' => 'Crear',
+                        'edit' => 'Editar',
+                        default => ucfirst(str_replace('-', ' ', $segment))
+                    };
+
+                    if (in_array($segment, ['create', 'edit']) && $index >= 1) {
+                        $entity = ucfirst(str_replace('-', ' ', $segments[$index - 1]));
+                        $name .= " $entity";
+                    }
+                @endphp
+
+                @if ($isLast)
+                    <li class="breadcrumb-item active" aria-current="page">{{ $name }}</li>
+                @else
+                    <li class="breadcrumb-item"><a href="{{ $url }}">{{ $name }}</a></li>
+                @endif
+            @endforeach
+        </ol>
+    </nav>
+    <!-- Elementos a la derecha -->
+    <ul class="navbar-nav ms-auto">
+        <!-- Perfil de usuario -->
+        <li class="nav-item dropdown">
+            <a class="nav-link dropdown-toggle d-flex align-items-center" href="#" id="userDropdown" role="button"
+               data-bs-toggle="dropdown" aria-expanded="false">
+                <span class="me-2 d-none d-md-inline-block badge" style="background-color: var(--color-indigo-dark)"> Usuario: {{ auth()->user()->name }}</span>
+                <div class="profile-circle"></div>
             </a>
-            <!-- Dropdown - User Information -->
-            <div class="dropdown-menu dropdown-menu-right shadow animated--grow-in"
-                 aria-labelledby="userDropdown">
-                <a class="dropdown-item" href="#">
-                    <i class="fas fa-user fa-sm fa-fw mr-2 text-gray-400"></i>
-                    Perfil
-                </a>
-                <div class="dropdown-divider"></div>
-                <!-- Botón de logout -->
-                <a class="dropdown-item bg-primay" href="#"
-                   onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
-                    <i class="fas fa-sign-out-alt fa-sm fa-fw mr-2 text-gray-400"></i>
-                    Cerrar sesión
-                </a>
-                <!-- Formulario oculto para hacer logout -->
-                <form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
-                    @csrf
-                </form>
-            </div>
+            <ul class="dropdown-menu dropdown-menu-end shadow" aria-labelledby="userDropdown">
+                <li>
+                    <a class="dropdown-item d-flex align-items-center text-danger" href="#"
+                       onclick="event.preventDefault(); document.getElementById('logout-form').submit();">
+                        <i class="fas fa-sign-out-alt fa-sm fa-fw me-2"></i>
+                        <span>Cerrar sesión</span>
+                    </a>
+                </li>
+            </ul>
         </li>
     </ul>
 </nav>
 
-
+<!-- Formulario de logout -->
+<form id="logout-form" action="{{ route('logout') }}" method="POST" class="d-none">
+    @csrf
+</form>

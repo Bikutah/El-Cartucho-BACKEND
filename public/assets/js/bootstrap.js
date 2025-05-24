@@ -1,14 +1,25 @@
 (function($) {
   "use strict"; // Start of use strict
 
-  // Toggle the side navigation
-  $("#sidebarToggle, #sidebarToggleTop").on('click', function(e) {
-    $("body").toggleClass("sidebar-toggled");
-    $(".sidebar").toggleClass("toggled");
-    if ($(".sidebar").hasClass("toggled")) {
-      $('.sidebar .collapse').collapse('hide');
-    };
-  });
+// Al cargar la página
+if (localStorage.getItem("sidebarToggled") === "true") {
+  $("body").addClass("sidebar-toggled");
+  $(".sidebar").addClass("toggled");
+}
+
+// Al hacer clic
+$("#sidebarToggle, #sidebarToggleTop").on('click', function(e) {
+  $("body").toggleClass("sidebar-toggled");
+  $(".sidebar").toggleClass("toggled");
+
+  const toggled = $(".sidebar").hasClass("toggled");
+  localStorage.setItem("sidebarToggled", toggled); // Guardamos el estado
+
+  if (toggled) {
+    $('.sidebar .collapse').collapse('hide');
+  }
+});
+
 
   // Close any open menu accordions when window is resized below 768px
   $(window).resize(function() {

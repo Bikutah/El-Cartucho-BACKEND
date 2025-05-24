@@ -20,9 +20,7 @@ class LoginController extends Controller
         }
     
         // Si el login falla
-        return back()->withErrors([
-            'login' => 'Usuario o contraseña incorrectos.',
-        ])->withInput();
+        return back()->withInput()->with('login_error', 'Credenciales inválidas 💀');
     }
     
 
@@ -40,9 +38,7 @@ class LoginController extends Controller
             return redirect()->intended('/'); // o donde quieras
         }
     
-        return back()->withErrors([
-            'name' => 'Las credenciales son incorrectas.',
-        ])->onlyInput('name');
+        return back()->withInput()->with('login_error', 'Credenciales inválidas 💀');
     }
     
 
