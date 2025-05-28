@@ -26,6 +26,7 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
     # Productos
     Route::resource('productos', ProductoController::class);
+    
     Route::get('/productos/{producto}/imagenes', [ProductoController::class, 'verImagenes'])->name('productos.imagenes');
     Route::delete('productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
 
@@ -36,6 +37,6 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
 });
 
-
+Route::get('/api/producto/listar', [ProductoController::class, 'buscar']);
 
 
