@@ -37,6 +37,5 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
 });
 
-Route::get('/api/producto/listar', [ProductoController::class, 'buscar']);
 
 
