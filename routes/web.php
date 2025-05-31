@@ -12,8 +12,6 @@ use App\Http\Controllers\ImagenController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\WebhookController;
 
-
-
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
