@@ -40,14 +40,3 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
 });
 
-// Endpoints
-
-#Mercado Pago
-Route::post('/ed/webhook/mercadopago', [WebhookController::class, 'handle']);
-
-#Productos
-Route::get('/ed/producto/listar', [ProductoController::class, 'buscar']);
-
-#Pedidos
-Route::post('/ed/pedido', [PedidoController::class, 'store']);
-

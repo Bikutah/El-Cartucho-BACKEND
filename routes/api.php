@@ -9,3 +9,16 @@ use App\Http\Controllers\WebhookController;
 Route::get('/user', function (Request $request) {
     return $request->user();
 })->middleware('auth:sanctum');
+
+
+// Endpoints
+
+#Mercado Pago
+Route::post('/ed/webhook/mercadopago', [WebhookController::class, 'handle']);
+
+#Productos
+Route::get('/ed/producto/listar', [ProductoController::class, 'buscar']);
+
+#Pedidos
+Route::post('/ed/pedido', [PedidoController::class, 'store']);
+
