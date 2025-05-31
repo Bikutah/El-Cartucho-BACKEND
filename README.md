@@ -38,18 +38,18 @@ Este panel de administración se enfoca en gestionar todos los aspectos de *El C
 - **Backend(API para el panel de administración):** <br>
 ![Laravel](https://img.shields.io/badge/laravel-%23FF2D20.svg?style=for-the-badge&logo=laravel&logoColor=white) 
 - **Base de datos:** <br>
-![SQLite](https://img.shields.io/badge/sqlite-%2307405e.svg?style=for-the-badge&logo=sqlite&logoColor=white) 
+![Postgres](https://img.shields.io/badge/postgres-%23316192.svg?style=for-the-badge&logo=postgresql&logoColor=white)
 
 ---
 
 ## 🛠️ Funcionalidades principales del Panel de Administración
 
 - **Gestión de productos:** Agregar, editar y eliminar productos retro (consolas, juegos, merchandising, etc.)
-- **Gestión de categorías:** Agregar, editar y eliminar categorías (consolas, juegos, accesorios, merchandising, etc.)
+- **Gestión de categorías:** Agregar, editar categorías (consolas, juegos, accesorios, merchandising, etc.)
 - **Gestión de usuarios:** Ver y gestionar usuarios registrados, asignar roles (administrador, cliente, etc.)
 - **Gestión de pedidos:** Visualizar y gestionar los pedidos realizados por los usuarios.
 - **Reportes y análisis:** Visualizar estadísticas y reportes de ventas, productos más vendidos, etc.
-- **Autenticación:** Panel de acceso seguro para administradores con roles específicos.
+- **Autenticación:** Panel de acceso seguro para administradores.
 
 ---
 

@@ -18,8 +18,6 @@ return new class extends Migration
             $table->string('descripcion');
             $table->decimal('precioUnitario', 8, 2);
             $table->integer('stock');
-            $table->string('image_url');
-            $table->string('image_public_id');
             $table->foreignId('categoria_id')->constrained('categorias')->onDelete('cascade');
             $table->timestamps();
         });

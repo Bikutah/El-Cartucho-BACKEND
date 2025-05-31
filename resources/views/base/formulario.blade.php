@@ -1,86 +1,168 @@
+@php use Illuminate\Support\Str; @endphp
 @extends('layouts.app')
 
 @section('title', $titulo ?? 'Formulario')
 
 @section('content')
+<h1 class="h3 mb-4 fw-bold" style="color: var(--color-primario);">
+    {{ $titulo ?? 'Formulario' }}
+</h1>
 
-<h1 class="h3 mb-4 text-gray-800 font-weight-bold">{{ $titulo ?? 'Formulario' }}</h1>
-
-<div class="card shadow mb-4">
+<div class="card shadow border-0 mb-4" style="background-color: rgba(255,255,255,0.05);">
     <div class="card-body">
         <form action="{{ $action }}" method="POST" enctype="multipart/form-data">
             @csrf
-
-            @if (isset($method) && $method !== 'POST')
+            @if (isset($method) && strtoupper($method) !== 'POST')
                 @method($method)
             @endif
 
             @foreach ($campos as $campo)
-                <div class="mb-3">
-                    <label for="{{ $campo['name'] }}" class="form-label">{{ $campo['label'] }}</label>
+                @php
+                    $name = $campo['name'];
+                    $type = $campo['type'] ?? 'text';
+                    $label = $campo['label'] ?? Str::title($name);
+                    $placeholder = $campo['placeholder'] ?? '';
+                    $value = old($name, $campo['value'] ?? '');
+                    $multiple = !empty($campo['multiple']);
+                    $id = Str::slug($name, '_');
+                @endphp
 
-                    @if (($campo['type'] ?? 'text') === 'select')
+                <div class="mb-3">
+                    <label for="{{ $id }}" class="form-label fw-semibold" style="color: var(--color-secundario);">
+                        {{ $label }}
+                    </label>
+
+                    {{-- Campo SELECT --}}
+                    @if ($type === 'select')
                         <select
-                            id="{{ $campo['name'] }}"
-                            name="{{ $campo['name'] }}"
-                            class="form-control"
-                            @if (!empty($campo['required'])) required @endif
+                            id="{{ $id }}"
+                            name="{{ $name }}"
+                            class="form-select"
                         >
-                            <option value="">{{ $campo['placeholder'] ?? 'Seleccione una opción' }}</option>
-                            @foreach ($campo['options'] as $value => $text)
-                            <option value="{{ $value }}" {{ (old($campo['name'], $campo['value'] ?? null) == $value) ? 'selected' : '' }}>
-                                {{ $text }}
-                            </option>
+                            <option value="">{{ $placeholder ?: 'Seleccione una opción' }}</option>
+                            @foreach (($campo['options'] ?? []) as $optionValue => $optionText)
+                                <option value="{{ $optionValue }}" {{ $value == $optionValue ? 'selected' : '' }}>
+                                    {{ $optionText }}
+                                </option>
                             @endforeach
                         </select>
-                    @elseif (($campo['type'] ?? 'text') === 'textarea')
+
+                    {{-- Campo TEXTAREA --}}
+                    @elseif ($type === 'textarea')
                         <textarea
-                            id="{{ $campo['name'] }}"
-                            name="{{ $campo['name'] }}"
+                            id="{{ $id }}"
+                            name="{{ $name }}"
                             class="form-control"
-                            placeholder="{{ $campo['placeholder'] ?? '' }}"
-                            rows="{{ $campo['rows'] ?? 4 }}"
-                            cols="{{ $campo['cols'] ?? 50 }}"
-                            @if (!empty($campo['required'])) required @endif
-                        >{{ old($campo['name'], $campo['value'] ?? '') }}</textarea>
-                        @elseif (($campo['type'] ?? 'text') === 'file' || $campo['name'] === 'imagen')
-                        <div class="mb-3">
-                            <label for="imagen" class="btn btn-primary">
-                                Seleccionar imagen
-                            </label>
-                            <input
-                                type="file"
-                                id="imagen"
-                                name="imagen"
-                                accept="image/*"
-                                class="d-none"
-                                onchange="previewImagen(event)"
-                                required
-                            >
-
-                            <div class="mt-3">
-                                <img id="preview" src="#" alt="Vista previa" style="max-width: 100%; max-height: 300px; display: none;">
+                            placeholder="{{ $placeholder }}"
+                            style="min-height: 230px;"
+                            oninput="actualizarContador('{{ $id }}', 500)"
+                        >{{ $value }}</textarea>
+                            <div class="form-text text-end">
+                                <span id="contador-{{ $id }}">0</span><span id="restante-contador">/500 caracteres</span>
                             </div>
-                        </div>
+                    {{-- Campo FILE --}}
+                    @elseif ($type === 'file')
+                        <input
+                            type="file"
+                            id="{{ $id }}"
+                            name="{{ $name }}{{ $multiple ? '[]' : '' }}"
+                            class="form-control"
+                            {{ $multiple ? 'multiple' : '' }}
+                        >
 
+                        {{-- Vista previa solo para campo "imagen" --}}
+                        @if ($name === 'imagen')
+                            <div id="preview-wrapper" class="position-relative mt-3" style="display: none;">
+                                <button type="button" id="clear-preview" class="btn-close position-absolute top-0 end-0 m-2" aria-label="Cerrar" onclick="clearPreview()"></button>
+                                <img id="preview" src="#" alt="Vista previa" class="img-fluid border rounded p-1" style="max-height: 300px;">
+                            </div>
+                        @endif
+
+                    {{-- Campo INPUT normal --}}
                     @else
                         <input
-                            type="{{ $campo['type'] ?? 'text' }}"
-                            id="{{ $campo['name'] }}"
-                            name="{{ $campo['name'] }}"
+                            type="{{ $type }}"
+                            id="{{ $id }}"
+                            name="{{ $name }}"
                             class="form-control"
-                            placeholder="{{ $campo['placeholder'] ?? '' }}"
-                            value="{{ old($campo['name'], $campo['value'] ?? '') }}"
-                            @if (!empty($campo['required'])) required @endif
+                            placeholder="{{ $placeholder }}"
+                            value="{{ $value }}"
                         >
                     @endif
 
+                    {{-- Muestra error específico del campo --}}
+                    @error($name)
+                        <div class="text-danger mt-1 small">{{ $message }}</div>
+                    @enderror
                 </div>
             @endforeach
-            <button type="submit" class="btn btn-primary">{{ $textoBoton ?? 'Guardar' }}</button>
-            <a href="{{ $rutaVolver }}" class="btn btn-secondary">Volver</a>
+
+            <div class="d-flex mt-4">
+                <button type="submit" class="btn btn-primary">
+                    {{ $textoBoton ?? 'Guardar' }}
+                </button>
+                <a href="{{ $rutaVolver }}" class="btn btn-outline-secondary ms-2">
+                    Volver
+                </a>
+            </div>
         </form>
     </div>
 </div>
-
 @endsection
+
+@push('scripts')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    document.querySelectorAll('textarea').forEach(function(textarea) {
+        const id = textarea.id;
+        const max = 500; 
+        actualizarContador(id, max);
+    });
+});    
+function previewImagen(event) {
+    const input = event.target;
+    const wrapper = document.getElementById('preview-wrapper');
+    const preview = document.getElementById('preview');
+    const file = input.files[0];
+
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            preview.src = e.target.result;
+            wrapper.style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function clearPreview() {
+    const input = document.getElementById('imagen');
+    const preview = document.getElementById('preview');
+    const wrapper = document.getElementById('preview-wrapper');
+
+    input.value = '';
+    preview.src = '#';
+    wrapper.style.display = 'none';
+}
+
+function actualizarContador(id, max) {
+    const textarea = document.getElementById(id);
+    const restanteContador = document.getElementById('restante-contador');
+    const contador = document.getElementById('contador-' + id);
+    const longitud = textarea.value.length;
+
+    contador.textContent = longitud;
+
+    if (longitud > max) {
+        contador.classList.add('text-danger', 'fw-semibold');
+        textarea.classList.add('border-danger', 'is-invalid');
+        restanteContador.classList.add('text-danger', 'fw-semibold');
+    } else {
+        contador.classList.remove('text-danger', 'fw-semibold');
+        textarea.classList.remove('border-danger', 'is-invalid');
+        restanteContador.classList.remove('text-danger', 'fw-semibold');
+    }
+
+}
+</script>
+@endpush
