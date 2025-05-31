@@ -71,7 +71,7 @@
                 <span class="table-cell-label">Imágenes:</span>
                 <span>
                     <a href="' . route('productos.imagenes', $producto) . '" class="action-btn"
-                    data-bs-toggle="tooltip" data-bs-placement="top" title="Ver imágenes">
+                    data-bs-toggle="tooltip" data-bs-placement="top" title="Ver,eliminar y agregar imágenes">
                         <i class="fas fa-images"></i>
                         <span class="badge bg-light text-dark">' . count($producto->imagenes) . '</span>
                     </a>

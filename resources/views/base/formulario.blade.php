@@ -58,7 +58,7 @@
                             oninput="actualizarContador('{{ $id }}', 500)"
                         >{{ $value }}</textarea>
                             <div class="form-text text-end">
-                                <span id="contador-{{ $id }}">0</span>/500 caracteres
+                                <span id="contador-{{ $id }}">0</span><span id="restante-contador">/500 caracteres</span>
                             </div>
                     {{-- Campo FILE --}}
                     @elseif ($type === 'file')
@@ -147,6 +147,7 @@ function clearPreview() {
 
 function actualizarContador(id, max) {
     const textarea = document.getElementById(id);
+    const restanteContador = document.getElementById('restante-contador');
     const contador = document.getElementById('contador-' + id);
     const longitud = textarea.value.length;
 
@@ -154,8 +155,12 @@ function actualizarContador(id, max) {
 
     if (longitud > max) {
         contador.classList.add('text-danger', 'fw-semibold');
+        textarea.classList.add('border-danger', 'is-invalid');
+        restanteContador.classList.add('text-danger', 'fw-semibold');
     } else {
         contador.classList.remove('text-danger', 'fw-semibold');
+        textarea.classList.remove('border-danger', 'is-invalid');
+        restanteContador.classList.remove('text-danger', 'fw-semibold');
     }
 
 }

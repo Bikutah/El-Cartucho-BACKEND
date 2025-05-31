@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use App\Models\Subcategoria;
 use App\Models\Categoria;
+use Illuminate\Validation\Rule;
 
 class SubcategoriaController extends Controller
 {
@@ -28,9 +29,8 @@ class SubcategoriaController extends Controller
                 'items' => $subcategorias,
                 'columnas' => ['Id', 'Nombre', 'Categoría'],
                 'rutaEditar' => 'subcategorias.edit',
-                'renderFila' => function($subcategoria) {
-                        return '
-                            <div class="table-cell">
+                'renderFila' => function ($subcategoria) {
+                    return '<div class="table-cell">
                                 <span class="table-cell-label">Id:</span>
                                 <span>' . e($subcategoria->id) . '</span>
                             </div>
@@ -39,20 +39,20 @@ class SubcategoriaController extends Controller
                                 <span class="truncate-15 truncate-with-tooltip"
                                     data-bs-toggle="tooltip"
                                     data-bs-placement="top"
-                                    title="' . e($subcategoria->nombre) . '">' 
-                                    . e($subcategoria->nombre) . 
-                                '</span>
+                                    title="' . e($subcategoria->nombre) . '">'
+                                        . e($subcategoria->nombre) .
+                                        '</span>
                             </div>
-                            <div class="table-cell descripcion">
-                                <span class="table-cell-label">Descripción:</span>
+                            <div class="table-cell categoria">
+                                <span class="table-cell-label">Categoría:</span>
                                 <span class="truncate-15 truncate-with-tooltip"
                                     data-bs-toggle="tooltip"
                                     data-bs-placement="top"
-                                    title="' . e($subcategoria->descripcion) . '">' 
-                                    . e($subcategoria->descripcion) . 
-                                '</span>
+                                    title="' . e(optional($subcategoria->categoria)->nombre ?? 'Sin categoría') . '">'
+                                        . e(optional($subcategoria->categoria)->nombre ?? 'Sin categoría') .
+                                        '</span>
                             </div>';
-                        }
+                }
             ])->render();
         }
 
@@ -100,14 +100,21 @@ class SubcategoriaController extends Controller
         } else {
             $subcategoria->categoria = null;
         }
-        return view('subcategoria.subcategoria_editar', compact('subcategoria','categorias'));
+        return view('subcategoria.subcategoria_editar', compact('subcategoria', 'categorias'));
     }
 
     public function update(Request $request, string $id)
     {
+        $subcategoria = Subcategoria::findOrFail($id);
+
         $request->validate([
-            'nombre' => 'required|string|max:255|unique:subcategorias,nombre',
-            'categoria_id' => 'required|exists:categorias,id'
+            'nombre' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('subcategorias', 'nombre')->ignore($subcategoria->id),
+            ],
+            'categoria_id' => 'required|exists:categorias,id',
         ], [
             'nombre.required' => 'El nombre de la subcategoría es obligatorio.',
             'nombre.string' => 'El nombre debe ser una cadena de texto.',
@@ -118,7 +125,6 @@ class SubcategoriaController extends Controller
             'categoria_id.exists' => 'La categoría seleccionada no existe.',
         ]);
 
-        $subcategoria = Subcategoria::findOrFail($id);
         $subcategoria->update($request->all());
 
         return redirect()->route('subcategorias.index')->with('success', 'Subcategoría actualizada correctamente');

@@ -34,6 +34,7 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::resource('subcategorias', SubcategoriaController::class);
 
     Route::delete('/imagenes/{imagen}', [ImagenController::class, 'destroy'])->name('imagenes.destroy');
+    Route::post('/imagenes', [ImagenController::class, 'store'])->name('imagenes.store');
 
 });
 

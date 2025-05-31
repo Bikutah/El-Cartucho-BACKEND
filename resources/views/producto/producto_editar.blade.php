@@ -39,14 +39,6 @@
             'value' => $producto->stock
         ],
         [
-            'name' => 'imagen',
-            'label' => 'Imagen',
-            'placeholder' => 'URL de la imagen del producto',
-            'type' => 'url',
-            'required' => false,
-            'value' => $producto->imagen
-        ],
-        [
             'name' => 'categoria_id',
             'label' => 'Categoría',
             'placeholder' => 'Seleccione una categoría',

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 use App\Models\Categoria;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class CategoriaController extends Controller
 {
@@ -115,8 +116,13 @@ class CategoriaController extends Controller
     public function update(Request $request, Categoria $categoria)
     {
         $request->validate([
-            'nombre' => 'required|string|max:255|unique:categorias,nombre',
-            'descripcion' => 'required|string'
+            'nombre' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('categorias', 'nombre')->ignore($categoria->id),
+            ],
+            'descripcion' => 'required|string',
         ], [
             'nombre.required' => 'El nombre es obligatorio.',
             'nombre.string' => 'El nombre debe ser una cadena de texto.',
@@ -131,6 +137,7 @@ class CategoriaController extends Controller
 
         return redirect()->route('categorias.index')->with('success', 'Categoría actualizada correctamente');
     }
+
 
     /**
      * Remove the specified resource from storage.
