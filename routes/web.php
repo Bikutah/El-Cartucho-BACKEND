@@ -15,6 +15,8 @@ Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
 Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
 
+Route::get('/api/producto/listar', [ProductoController::class, 'buscar']);
+
 // Rutas protegidas
 Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
