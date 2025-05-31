@@ -9,6 +9,10 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\SubcategoriaController;
 use App\Http\Controllers\ImagenController;
+use Illuminate\Http\Request;
+use App\Http\Controllers\WebhookController;
+
+
 
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -38,5 +42,14 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
 });
 
+// Endpoints
 
+#Mercado Pago
+Route::post('/ed/webhook/mercadopago', [WebhookController::class, 'handle']);
+
+#Productos
+Route::get('/ed/producto/listar', [ProductoController::class, 'buscar']);
+
+#Pedidos
+Route::post('/ed/pedido', [PedidoController::class, 'store']);
 
