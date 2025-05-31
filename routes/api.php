@@ -12,10 +12,10 @@ Route::get('/user', function (Request $request) {
 
 
 #Mercado Pago
-Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
+Route::post('_/webhook/mercadopago', [WebhookController::class, 'handle']);
 
 #Productos
-
+Route::get('_/producto/listar', [ProductoController::class, 'buscar']);
 
 #Pedidos
 Route::post('/pedido', [PedidoController::class, 'store']);
