@@ -95,6 +95,7 @@ $(document).ready(function () {
     let currentRowId = null;
 
     $(document).on('show.bs.modal', '#modalEliminar', function (event) {
+        console.log('Evento show.bs.modal disparado');
         const button = event.relatedTarget;
         if (!button) {
             console.error('Error: Botón relacionado no encontrado');
@@ -102,10 +103,12 @@ $(document).ready(function () {
         }
 
         currentRowId = button.getAttribute('data-id');
+        console.log('ID del producto:', currentRowId);
     });
 
     $(document).on('submit', '#formEliminar', function (e) {
         e.preventDefault();
+        console.log('Evento submit disparado');
 
         if (!currentRowId) {
             console.error('Error: ID del producto no definido');
@@ -113,6 +116,7 @@ $(document).ready(function () {
         }
 
         const action = `/productos/${currentRowId}`;
+        console.log('Enviando solicitud a:', action);
 
         // Mostrar spinner y deshabilitar botón
         const btnEliminar = document.getElementById('btnEliminar');
@@ -132,15 +136,18 @@ $(document).ready(function () {
             body: new FormData(this)
         })
         .then(response => {
+            console.log('Respuesta del servidor:', response);
             if (!response.ok) {
                 throw new Error(`Error al eliminar: ${response.status} ${response.statusText}`);
             }
             return response.json();
         })
         .then(data => {
+            console.log('Datos recibidos:', data);
             const row = document.querySelector(`.table-row[data-id="${currentRowId}"]`);
             if (row) {
                 row.remove();
+                console.log('Fila eliminada:', currentRowId);
             } else {
                 console.warn('No se encontró la fila con ID:', currentRowId);
             }
@@ -148,12 +155,44 @@ $(document).ready(function () {
             const bsModal = bootstrap.Modal.getInstance(document.getElementById('modalEliminar'));
             if (bsModal) {
                 bsModal.hide();
+                console.log('Modal cerrado');
             } else {
                 console.error('Error: No se pudo cerrar el modal');
+            }
+
+            // Insertar alerta de éxito
+            const alertContainer = document.getElementById('alert-container');
+            if (alertContainer) {
+                const alertDiv = document.createElement('div');
+                alertDiv.className = 'alert alert-success alert-dismissible fade show mb-4 rounded-3 border-0 shadow-sm';
+                alertDiv.setAttribute('role', 'alert');
+                alertDiv.innerHTML = `
+                    <div class="d-flex">
+                        <div class="me-3">
+                            <i class="fas fa-check-circle fa-lg"></i>
+                        </div>
+                        <div>
+                            Producto eliminado correctamente
+                        </div>
+                    </div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                `;
+                alertContainer.insertBefore(alertDiv, alertContainer.firstChild);
+                // Inicializar Bootstrap para la alerta
+                const bsAlert = new bootstrap.Alert(alertDiv);
+                // Cerrar automáticamente después de 8 segundos
+                setTimeout(() => {
+                    if (bsAlert) {
+                        bsAlert.close();
+                    }
+                }, 8000); // 8 segundos
+            } else {
+                console.error('Error: Contenedor de alertas no encontrado');
             }
         })
         .catch(error => {
             console.error('Error:', error);
+            // Opcional: Insertar alerta de error si quieres
         })
         .finally(() => {
             // Restaurar botón
