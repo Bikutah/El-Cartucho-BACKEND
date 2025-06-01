@@ -114,19 +114,18 @@
 $(document).ready(function() {
     // Inicializar elementos
     const cardBody = $('.card-body');
-    let btnAgregar = $('label[for="input-imagen"]'); // Usar let para permitir reasignación
-    const inputImagen = $('#input-imagen');
+    let btnAgregar = $('label[for="input-imagen"]');
     let carousel = $('#carouselProducto');
     let carouselInner = $('.carousel-inner');
     let miniaturas = $('.thumbnail');
     let bsCarousel = null;
     let miniaturasContainer = $('#miniaturas');
 
-    // Función para inicializar o reinicializar el carrusel
+    // Función para inicializar o reinicializar el carrusel y sus eventos
     function inicializarCarrusel() {
         if (carousel.length) {
             if (bsCarousel) {
-                bsCarousel.dispose(); // Destruir instancia previa si existe
+                bsCarousel.dispose();
             }
             bsCarousel = new bootstrap.Carousel(carousel[0], {
                 interval: 5000,
@@ -134,38 +133,75 @@ $(document).ready(function() {
                 touch: true,
                 keyboard: true
             });
+
+            // Registrar eventos del carrusel
+            carousel.off('slide.bs.carousel').on('slide.bs.carousel', function(event) {
+                miniaturas.removeClass('active');
+                miniaturas.eq(event.to).addClass('active');
+            });
+
+            // Registrar eventos de miniaturas
+            miniaturas.off('click').on('click', function() {
+                const index = $(this).data('bs-slide-to');
+                bsCarousel.to(index);
+            });
+        }
+    }
+
+    // Función para actualizar el estado del botón de agregar imagen
+    function actualizarEstadoBoton() {
+        btnAgregar = $('label[for="input-imagen"]');
+        if (carouselInner.length && carouselInner.children().length >= 5) {
+            if (btnAgregar.length) {
+                btnAgregar.addClass('d-none');
+            }
+        } else {
+            if (!btnAgregar.length) {
+                const addButtonHtml = `
+                    <label for="input-imagen" class="mb-4 btn btn-success d-flex align-items-center" style="cursor: pointer;">
+                        <i class="fas fa-plus me-2 d-block"></i> Agregar imagen
+                    </label>
+                `;
+                $('#form-subir-imagen').parent().prepend(addButtonHtml);
+                btnAgregar = $('label[for="input-imagen"]');
+            } else {
+                btnAgregar.removeClass('d-none');
+            }
+        }
+        const inputImagen = $('#input-imagen');
+        if (inputImagen.length) {
+            inputImagen.val('');
         }
     }
 
     // Verificar el número de imágenes al cargar la página
-    if (carouselInner.length && carouselInner.children().length >= 5) {
-        btnAgregar.hide();
-    }
+    actualizarEstadoBoton();
 
-    // Inicializar carrusel si existe
-    if (carousel.length) {
-        inicializarCarrusel();
+    // Inicializar carrusel si existe al cargar
+    inicializarCarrusel();
 
-        // Sincronizar miniaturas con el carrusel
-        carousel.on('slide.bs.carousel', function(event) {
-            miniaturas.removeClass('active');
-            miniaturas.eq(event.to).addClass('active');
-        });
-
-        // Evento click en miniaturas
-        miniaturas.on('click', function() {
-            const index = $(this).data('bs-slide-to');
-            bsCarousel.to(index);
-        });
-    }
-
-    // Manejar la subida de imágenes
-    inputImagen.on('change', function() {
+    // Manejar la subida de imágenes con delegación de eventos
+    $(document).on('change', '#input-imagen', function(event) {
+        const input = $(this);
         const form = $('#form-subir-imagen');
-        const formData = new FormData(form[0]);
+        if (!form.length) {
+            alert("Error: El formulario para subir imágenes no está disponible.");
+            input.val('');
+            return;
+        }
 
-        // Deshabilitar botón y mostrar estado de carga con spinner de Bootstrap
-        btnAgregar.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Subiendo...');
+        const formData = new FormData(form[0]);
+        const file = input[0].files[0];
+        if (!file) {
+            alert("Por favor, selecciona una imagen válida.");
+            input.val('');
+            return;
+        }
+
+        btnAgregar = $('label[for="input-imagen"]');
+        if (btnAgregar.length) {
+            btnAgregar.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span> Subiendo...');
+        }
 
         $.ajax({
             url: form.attr('action'),
@@ -174,24 +210,23 @@ $(document).ready(function() {
             processData: false,
             contentType: false,
             headers: {
-                'X-CSRF-TOKEN': $('input[name="_token"]').val()
+                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content') || $('input[name="_token"]').val()
             },
             success: function(data) {
-                // Restaurar botón
-                btnAgregar.prop('disabled', false).html('<i class="fas fa-plus me-2"></i> Agregar imagen');
+                if (btnAgregar.length) {
+                    btnAgregar.prop('disabled', false).html('<i class="fas fa-plus me-2"></i> Agregar imagen');
+                }
+                input.val('');
 
-                // Verificar si hay error
                 if (!data.success || !data.imagen_url || !data.imagen_id) {
                     alert(data.error || 'Respuesta inválida del servidor.');
                     return;
                 }
 
-                // Si no hay carrusel (primer imagen), crear la estructura
-                if (!carousel.length) {
-                    // Remover el estado vacío si existe
+                // Crear o reparar carrusel si no existe o está incompleto
+                if (!carousel.length || !carousel.find('.carousel-inner').length) {
                     $('.empty-state').remove();
-
-                    // Crear la estructura del carrusel
+                    $('#carouselProducto').remove(); // Eliminar cualquier carrusel residual
                     const carouselHtml = `
                         <div id="carouselProducto" class="carousel slide mb-4 rounded-4 overflow-hidden shadow-sm gallery-carousel" data-bs-ride="carousel" data-bs-touch="true">
                             <div class="carousel-inner rounded-4"></div>
@@ -206,12 +241,9 @@ $(document).ready(function() {
                         </div>
                     `;
                     cardBody.append(carouselHtml);
-
-                    // Actualizar referencias
                     carousel = $('#carouselProducto');
-                    carouselInner = $('.carousel-inner');
+                    carouselInner = carousel.find('.carousel-inner');
 
-                    // Crear el contenedor de miniaturas si no existe
                     if (!miniaturasContainer.length) {
                         const miniaturasHtml = `
                             <div class="thumbnails-container d-flex justify-content-center gap-3 flex-wrap" id="miniaturas"></div>
@@ -221,11 +253,14 @@ $(document).ready(function() {
                     }
                 }
 
-                // Determinar si el nuevo slide debe ser activo
+                // Asegurar que carouselInner esté definido
+                if (!carouselInner.length) {
+                    carouselInner = carousel.find('.carousel-inner');
+                }
+
                 const totalItems = carouselInner.children().length;
                 const active = totalItems === 0 ? 'active' : '';
 
-                // Agregar nuevo slide al carrusel
                 const nuevaSlide = `
                     <div class="carousel-item ${active}">
                         <div class="main-image-container position-relative">
@@ -244,7 +279,6 @@ $(document).ready(function() {
                 `;
                 carouselInner.append(nuevaSlide);
 
-                // Agregar nueva miniatura
                 const thumbnail = `
                     <div class="thumbnail-wrapper">
                         <img src="${data.imagen_url}" 
@@ -254,28 +288,23 @@ $(document).ready(function() {
                              alt="Miniatura">
                     </div>
                 `;
-                miniaturasContainer.append(thumbnail);
+                miniaturasContainer.append($(thumbnail));
 
-                // Actualizar miniaturas
                 miniaturas = $('.thumbnail');
-
-                // Agregar evento click a la nueva miniatura
                 miniaturasContainer.find('img[data-bs-slide-to="' + totalItems + '"]').on('click', function() {
-                    bsCarousel.to(totalItems);
+                    if (bsCarousel) {
+                        bsCarousel.to(totalItems);
+                    }
                 });
 
-                // Ocultar botón si hay 5 o más imágenes
-                if (carouselInner.children().length + 1 >= 5) {
-                    btnAgregar.hide();
-                }
-
-                // Inicializar o reinicializar el carrusel
+                actualizarEstadoBoton();
                 inicializarCarrusel();
             },
             error: function(xhr) {
-                console.error('Error en la subida:', xhr.responseJSON);
-                // Restaurar botón
-                btnAgregar.prop('disabled', false).html('<i class="fas fa-plus me-2"></i> Agregar imagen');
+                if (btnAgregar.length) {
+                    btnAgregar.prop('disabled', false).html('<i class="fas fa-plus me-2"></i> Agregar imagen');
+                }
+                input.val('');
                 alert('Ocurrió un error al subir la imagen: ' + (xhr.responseJSON?.error || 'Error desconocido'));
             }
         });
@@ -302,14 +331,12 @@ $(document).ready(function() {
     // Manejar la eliminación con AJAX
     $('#formEliminar').on('submit', function(e) {
         e.preventDefault();
-
         const form = $(this);
         const url = form.attr('action');
         const slideIndex = form.data('slide-index');
         const csrfToken = $('input[name="_token"]').val();
         const btnEliminar = $('#confirmarEliminar');
 
-        // Mostrar spinner y deshabilitar botón
         btnEliminar.prop('disabled', true);
         btnEliminar.find('.btn-text').text('Eliminando...');
         btnEliminar.find('.spinner-border').removeClass('d-none');
@@ -321,61 +348,50 @@ $(document).ready(function() {
                 'X-CSRF-TOKEN': csrfToken
             },
             success: function(data) {
-                // Restaurar botón
                 btnEliminar.prop('disabled', false);
                 btnEliminar.find('.btn-text').text('Eliminar');
                 btnEliminar.find('.spinner-border').addClass('d-none');
 
-                // Cerrar el modal y limpiar backdrop
                 $('#modalEliminar').modal('hide');
                 $('.modal-backdrop').remove();
                 $('body').removeClass('modal-open');
                 $('body').css('padding-right', '');
 
-                // Verificar si hay error
                 if (!data.success) {
                     alert(data.error || 'Error al eliminar la imagen.');
                     return;
                 }
 
-                // Remover el slide correspondiente
                 const slide = carouselInner.find('.carousel-item').eq(slideIndex);
                 const isActive = slide.hasClass('active');
                 slide.remove();
 
-                // Remover la miniatura correspondiente
                 miniaturasContainer.find('.thumbnail-wrapper').eq(slideIndex).remove();
-
-                // Actualizar referencias de miniaturas
                 miniaturas = $('.thumbnail');
 
-                // Actualizar índices de las miniaturas restantes
                 miniaturas.each(function(index) {
                     $(this).attr('data-bs-slide-to', index);
                 });
 
-                // Actualizar índices de los botones de eliminación restantes
                 carouselInner.find('.btn-delete').each(function(index) {
                     $(this).attr('data-slide-index', index);
                 });
 
-                // Si se eliminó el slide activo, establecer el primer slide como activo
                 if (carouselInner.children().length > 0 && isActive) {
                     carouselInner.children().first().addClass('active');
                     miniaturas.first().addClass('active');
                 }
 
-                // Si no hay imágenes, remover el carrusel y mostrar estado vacío
                 if (carouselInner.children().length === 0) {
-                    carousel.remove();
-                    carousel = null;
-                    carouselInner = null;
+                    carousel.hide();
+                    carousel = 0;
+                    carouselInner = 0;
                     if (bsCarousel) {
                         bsCarousel.dispose();
-                        bsCarousel = null;
+                        bsCarousel = 0;
                     }
                     miniaturasContainer.remove();
-                    miniaturasContainer = null;
+                    miniaturasContainer = 0;
 
                     const emptyStateHtml = `
                         <div class="empty-state rounded-3 p-5 text-center">
@@ -387,31 +403,13 @@ $(document).ready(function() {
                     cardBody.append(emptyStateHtml);
                 }
 
-                // Mostrar el botón de agregar imagen si hay menos de 5 imágenes
-                if (!carouselInner.length || carouselInner.children().length < 5) {
-                    if (!btnAgregar.length) {
-                        const addButtonHtml = `
-                            <label for="input-imagen" class="mb-4 btn btn-success d-flex align-items-center" style="cursor: pointer;">
-                                <i class="fas fa-plus me-2"></i> Agregar imagen
-                            </label>
-                        `;
-                        $('#form-subir-imagen').parent().prepend(addButtonHtml);
-                        btnAgregar = $('label[for="input-imagen"]'); // Reasignar btnAgregar
-                    } else {
-                        btnAgregar.show();
-                    }
-                }
-
-                // Reinicializar el carrusel
+                actualizarEstadoBoton();
                 inicializarCarrusel();
             },
             error: function(xhr) {
-                console.error('Error al eliminar:', xhr.responseJSON);
-                // Restaurar botón
                 btnEliminar.prop('disabled', false);
                 btnEliminar.find('.btn-text').text('Eliminar');
                 btnEliminar.find('.spinner-border').addClass('d-none');
-                // Cerrar el modal y limpiar backdrop
                 $('#modalEliminar').modal('hide');
                 $('.modal-backdrop').remove();
                 $('body').removeClass('modal-open');
