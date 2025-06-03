@@ -17,7 +17,7 @@ Route::get('/user', function (Request $request) {
 Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
 
 #Productos
-Route::get('/ed/producto/listar', [ProductoController::class, 'buscar']);
+Route::get('/producto/listar', [ProductoController::class, 'buscar']);
 
 #Pedidos
 Route::post('/pedido', [PedidoController::class, 'store']);
