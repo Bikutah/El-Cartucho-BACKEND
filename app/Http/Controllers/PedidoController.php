@@ -155,6 +155,7 @@ class PedidoController extends Controller
                     'failure' => env('APP_URL') . '/pago/failure',
                     'pending' => env('APP_URL') . '/pago/pending',
                 ],
+                'notification_url' => 'https://el-cartucho-git-dev-victor-s-projects-2bfad959.vercel.app/ed/webhook/mercadopago',
                 'auto_return' => 'approved',
             ]);
 
