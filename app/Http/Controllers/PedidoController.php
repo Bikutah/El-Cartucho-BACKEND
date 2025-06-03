@@ -151,12 +151,13 @@ class PedidoController extends Controller
                 'items' => $items,
                 'external_reference' => $pedido->id,
                 'back_urls' => [
-                    'success' => env('APP_URL') . '/pago/success',
-                    'failure' => env('APP_URL') . '/pago/failure',
-                    'pending' => env('APP_URL') . '/pago/pending',
+                    'success' => env('FRONT_URL') . '/pago/success',
+                    'failure' => env('FRONT_URL') . '/pago/failure',
+                    'pending' => env('FRONT_URL') . '/pago/pending',
                 ],
                 'notification_url' => 'https://el-cartucho-git-dev-victor-s-projects-2bfad959.vercel.app/ed/webhook/mercadopago',
                 'auto_return' => 'approved',
+                'statement_descriptor' => 'ELCARTUCHO'
             ]);
 
         if (!$response->successful()) {
