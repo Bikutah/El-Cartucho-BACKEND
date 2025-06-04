@@ -8,6 +8,7 @@ return [
 
     'allowed_origins' => [
         'https://elcartucho-n8equiydj-agustinbowens-projects.vercel.app',
+        'https://elcartucho.vercel.app',
     ],
 
     'allowed_origins_patterns' => [],
