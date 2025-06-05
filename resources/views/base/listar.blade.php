@@ -15,7 +15,6 @@
 
 @if (isset($filtros))
     <form method="GET" action="{{ request()->url() }}" class="mb-3">
-        @csrf
         <div class="row g-2">
             @foreach ($filtros as $filtro)
                 <div class="col-md">
