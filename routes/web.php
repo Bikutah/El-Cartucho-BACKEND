@@ -9,6 +9,8 @@ use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\SubcategoriaController;
 use App\Http\Controllers\ImagenController;
+use Illuminate\Http\Request;
+use App\Http\Controllers\WebhookController;
 
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -28,7 +30,7 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::resource('productos', ProductoController::class);
     
     Route::get('/productos/{producto}/imagenes', [ProductoController::class, 'verImagenes'])->name('productos.imagenes');
-    Route::delete('productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
+    #Route::delete('productos/{producto}', [ProductoController::class, 'destroy'])->name('productos.destroy');
 
 
     Route::resource('subcategorias', SubcategoriaController::class);
@@ -37,6 +39,4 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::post('/imagenes', [ImagenController::class, 'store'])->name('imagenes.store');
 
 });
-
-
 

@@ -47,6 +47,7 @@ class ProductoController extends Controller
                     ['label' => 'Imágenes']
                 ],
                 'rutaEditar' => 'productos.edit',
+                'rutaEliminar' => 'productos.destroy',
                 'renderFila' => function ($producto) {
                     return '
                     <div class="table-cell">' . e($producto->id) . '</div>
@@ -56,8 +57,8 @@ class ProductoController extends Controller
                             data-bs-toggle="tooltip"
                             data-bs-placement="top"
                             title="' . e($producto->nombre) . '">'
-                                . e($producto->nombre) .
-                                '</span>
+                        . e($producto->nombre) .
+                        '</span>
                     </div>
                     <div class="table-cell descripcion">
                         <span class="table-cell-label">Descripción:</span>
@@ -65,8 +66,8 @@ class ProductoController extends Controller
                             data-bs-toggle="tooltip"
                             data-bs-placement="top"
                             title="' . e($producto->descripcion) . '">'
-                                . e($producto->descripcion) .
-                                '</span>
+                        . e($producto->descripcion) .
+                        '</span>
                     </div>
                     <div class="table-cell">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
                     <div class="table-cell">' . e($producto->stock) . '</div>
@@ -263,7 +264,7 @@ class ProductoController extends Controller
                 'signature'  => $signature,
             ]);
 
-            // Opcional: verificar respuesta y loguear si falla
+            // Podés validar $response si querés agregar control de errores
         }
 
         // Eliminar imágenes en base de datos
@@ -272,9 +273,12 @@ class ProductoController extends Controller
         // Eliminar el producto
         $producto->delete();
 
+        // Si es una petición AJAX, devolvé JSON
+        if (request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Producto eliminado correctamente.']);
+        }
+
+        // Si no, redireccioná como siempre
         return redirect()->route('productos.index')->with('success', 'Producto eliminado correctamente.');
     }
-    
 }
-
-

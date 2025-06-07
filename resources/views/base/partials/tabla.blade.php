@@ -15,11 +15,11 @@
         {{-- FILAS --}}
         <div class="table-container">
             @foreach ($items as $item)
-                <div class="table-row">
+                <div class="table-row" data-id="{{ $item->id }}">
                     {!! $renderFila($item) !!}
-                    <div class="table-cell actions">
+                    <div class="table-cell actions w-auto">
                         <span class="table-cell-label">Acciones</span>
-                        <div>
+                        <div class="d-flex gap-1">
                             @if (isset($rutaEditar))
                                 <a href="{{ route($rutaEditar, $item) }}" 
                                 class="action-btn"
@@ -32,9 +32,10 @@
                                         class="action-btn text-danger"
                                         data-bs-toggle="modal"
                                         data-bs-target="#modalEliminar"
+                                        data-id="{{ $item->id }}"
                                         data-action="{{ route($rutaEliminar, $item) }}"
                                         title="Eliminar">
-                                    <i class="fas fa-trash-alt me-1"></i>
+                                    <i class="fas fa-trash-alt"></i>
                                 </button>
                             @endif
                         </div>
@@ -60,35 +61,29 @@
 
 {{-- Modal global reutilizable --}}
 <div class="modal fade" id="modalEliminar" tabindex="-1" aria-labelledby="modalEliminarLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered">
-    <div class="modal-content rounded-4 shadow">
-      <div class="modal-header">
-        <h5 class="modal-title" id="modalEliminarLabel">Confirmar eliminación</h5>
-        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
-      </div>
-      <div class="modal-body">
-        ¿Estás seguro de que querés eliminar este elemento?
-      </div>
-      <div class="modal-footer">
-        <form id="formEliminar" method="POST">
-            @csrf
-            @method('DELETE')
-            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-            <button type="submit" class="btn btn-danger">Eliminar</button>
-        </form>
-      </div>
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 shadow">
+            <div class="modal-header">
+                <h5 class="modal-title" id="modalEliminarLabel">Confirmar eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Cerrar"></button>
+            </div>
+            <div class="modal-body">
+                ¿Estás seguro de que querés eliminar este elemento?
+            </div>
+            <div class="modal-footer">
+                <form id="formEliminar" method="POST" class="delete-form" onsubmit="return false;">
+                    @csrf
+                    @method('DELETE')
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-danger" id="btnEliminar">
+                        <span class="spinner-border spinner-border-sm d-none" role="status" aria-hidden="true"></span>
+                        <span class="btn-text">Eliminar</span>
+                    </button>
+                </form>
+            </div>
+        </div>
     </div>
-  </div>
 </div>
 
-<script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const modalEliminar = document.getElementById('modalEliminar');
-        modalEliminar.addEventListener('show.bs.modal', function (event) {
-            const button = event.relatedTarget;
-            const action = button.getAttribute('data-action');
-            const form = modalEliminar.querySelector('#formEliminar');
-            form.setAttribute('action', action);
-        });
-    });
-</script>
+
+

@@ -1,6 +1,7 @@
 @extends('layouts.base')
 
 @section('content-base')
+
 <body id="page-top">
     <div id="wrapper" class="d-flex">
         @include('layouts.sidebar')
@@ -13,34 +14,35 @@
 
                 <!-- Contenido principal -->
                 <div class="container-fluid flex-grow-1 p-4">
-                    @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3 border-0 shadow-sm" role="alert">
-                        <div class="d-flex">
-                            <div class="me-3">
-                                <i class="fas fa-check-circle fa-lg"></i>
+                    <div id="alert-container">
+                        @if(session('success'))
+                        <div class="alert alert-success alert-dismissible fade show mb-4 rounded-3 border-0 shadow-sm" role="alert">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <i class="fas fa-check-circle fa-lg"></i>
+                                </div>
+                                <div>
+                                    {{ session('success') }}
+                                </div>
                             </div>
-                            <div>
-                                {{ session('success') }}
-                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    @endif
+                        @endif
 
-                    @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show mb-4 rounded-3 border-0 shadow-sm" role="alert">
-                        <div class="d-flex">
-                            <div class="me-3">
-                                <i class="fas fa-exclamation-circle fa-lg"></i>
+                        @if(session('error'))
+                        <div class="alert alert-danger alert-dismissible fade show mb-4 rounded-3 border-0 shadow-sm" role="alert">
+                            <div class="d-flex">
+                                <div class="me-3">
+                                    <i class="fas fa-exclamation-circle fa-lg"></i>
+                                </div>
+                                <div>
+                                    {{ session('error') }}
+                                </div>
                             </div>
-                            <div>
-                                {{ session('error') }}
-                            </div>
+                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                         </div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                        @endif
                     </div>
-                    @endif
-
                     @yield('content')
                 </div>
             </div>
