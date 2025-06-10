@@ -8,46 +8,63 @@
 </h1>
 
 @if (isset($rutaCrear))
-    <a href="{{ route($rutaCrear) }}" class="btn btn-primary mb-3">
-        <i class="fas fa-plus me-1"></i> Crear nuevo
+<div class="create-button-section">
+    <a href="{{ route($rutaCrear) }}" class="btn-create">
+        <i class="fas fa-plus"></i>
+        <span class="btn-text">Crear nuevo</span>
     </a>
+</div>
 @endif
 
 @if (isset($filtros))
-    <form method="GET" action="{{ request()->url() }}" class="mb-3">
-        <div class="row g-2">
+<div class="filters-section">
+    <form method="GET" action="{{ request()->url() }}" class="filters-form">
+        <div class="filters-grid">
             @foreach ($filtros as $filtro)
-                <div class="col-md">
+                <div class="filter-field">
                     @if (isset($filtro['type']) && $filtro['type'] === 'select' && isset($filtro['options']))
-                        <select name="{{ $filtro['name'] }}" class="form-select">
-                            <option value="">{{ $filtro['placeholder'] ?? 'Seleccione una opción' }}</option>
-                            @foreach ($filtro['options'] as $value => $label)
-                                <option value="{{ $value }}" {{ request($filtro['name']) == $value ? 'selected' : '' }}>
-                                    {{ $label }}
-                                </option>
-                            @endforeach
-                        </select>
+                        <div class="select-wrapper">
+                            <select name="{{ $filtro['name'] }}" class="filter-select">
+                                <option value="">{{ $filtro['placeholder'] ?? 'Seleccione una opción' }}</option>
+                                @foreach ($filtro['options'] as $value => $label)
+                                    <option value="{{ $value }}" {{ request($filtro['name']) == $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            <i class="fas fa-chevron-down select-icon"></i>
+                        </div>
                     @else
-                        <input type="text"
-                            name="{{ $filtro['name'] }}"
-                            class="form-control"
-                            placeholder="{{ $filtro['placeholder'] ?? Str::title($filtro['name']) }}"
-                            value="{{ request($filtro['name']) }}">
+                        <div class="input-wrapper">
+                            <input type="text"
+                                name="{{ $filtro['name'] }}"
+                                class="filter-input"
+                                placeholder="{{ $filtro['placeholder'] ?? Str::title($filtro['name']) }}"
+                                value="{{ request($filtro['name']) }}">
+                            @if (request($filtro['name']))
+                                <button type="button" class="clear-input-btn" onclick="this.previousElementSibling.value=''; this.style.display='none';">
+                                    <i class="fas fa-times"></i>
+                                </button>
+                            @endif
+                        </div>
                     @endif
                 </div>
             @endforeach
 
-            <div class="col-md-auto">
-                <button class="btn btn-outline-secondary" type="submit">
-                    <i class="fas fa-search"></i> Buscar
+            <div class="filter-actions">
+                <button class="btn-search" type="submit">
+                    <i class="fas fa-search"></i>
+                    <span class="btn-text">Buscar</span>
                 </button>
 
-                <a href="{{ request()->url() }}" class="btn btn-outline-danger ms-2">
-                    <i class="fas fa-times"></i> Limpiar
+                <a href="{{ request()->url() }}" class="btn-clear">
+                    <i class="fas fa-times"></i>
+                    <span class="btn-text">Limpiar</span>
                 </a>
             </div>
         </div>
     </form>
+</div>
 @endif
 
 <div class="card shadow border-0 mb-4" style="background-color: rgba(255,255,255,0.05);">
