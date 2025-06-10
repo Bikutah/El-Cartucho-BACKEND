@@ -20,5 +20,5 @@ Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
 Route::get('/producto/listar', [ProductoController::class, 'buscar']);
 
 #Pedidos
-Route::post('/pedido', [PedidoController::class, 'store']);
+Route::post('/pedido/crear', [PedidoController::class, 'store']);
 
