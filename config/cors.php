@@ -2,11 +2,12 @@
 
 return [
 
-    'paths' => ['api/*', 'ed/*', 'sanctum/csrf-cookie'],
+    'paths' => ['api/*', 'ed/*', 'sanctum/csrf-cookie', '*'],
 
     'allowed_methods' => ['*'],
 
     'allowed_origins' => [
+        'http://localhost:5173', 
         'https://elcartucho-n8equiydj-agustinbowens-projects.vercel.app',
         'https://elcartucho.vercel.app',
     ],
