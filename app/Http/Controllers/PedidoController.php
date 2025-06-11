@@ -8,7 +8,7 @@ use App\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
-
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class PedidoController extends Controller
 {
@@ -16,7 +16,6 @@ class PedidoController extends Controller
     {
         $query = Pedido::with(['detalles.producto']);
 
-        // Filtros opcionales
         if ($request->filled('id')) {
             $query->where('id', $request->id);
         }
@@ -27,6 +26,14 @@ class PedidoController extends Controller
 
         if ($request->filled('estado')) {
             $query->where('estado', $request->estado);
+        }
+
+        if ($request->filled('total_min')) {
+            $query->where('total', '>=', $request->total_min);
+        }
+
+        if ($request->filled('total_max')) {
+            $query->where('total', '<=', $request->total_max);
         }
 
         $pedidos = $query->orderByDesc('created_at')->paginate(10)->withQueryString();
@@ -42,11 +49,12 @@ class PedidoController extends Controller
                     ['label' => 'Fecha'],
                     ['label' => 'Productos']
                 ],
-                'rutaEditar' => null, // si no hay edición
+                'rutaVer' => 'pedidos.show',
+                'rutaImprimir' => 'pedidos.imprimir',
                 'renderFila' => function ($pedido) {
                     $productosHtml = collect($pedido->detalles)->map(function ($detalle) {
-                        return '<li>' . e($detalle->producto->nombre ?? 'Producto eliminado') . 
-                            ' x' . $detalle->cantidad . 
+                        return '<li>' . e($detalle->producto->nombre ?? 'Producto eliminado') .
+                            ' x' . $detalle->cantidad .
                             ' ($' . number_format($detalle->precio_unitario, 2, ',', '.') . ')</li>';
                     })->implode('');
 
@@ -64,6 +72,49 @@ class PedidoController extends Controller
 
         return view('pedido.pedido_listar', compact('pedidos'));
     }
+    
+    public function show($id)
+    {
+        try {
+            $pedido = Pedido::with([
+                'detalles' => function ($query) {
+                    $query->with(['producto' => function ($query) {
+                        $query->with('imagenes');
+                    }]);
+                }
+            ])->findOrFail($id);
+
+            return view('pedido.pedido_show', compact('pedido'));
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return redirect()->route('pedidos.index')
+                ->with('error', 'El pedido solicitado no existe.');
+        } catch (\Exception $e) {
+            return redirect()->route('pedidos.index')
+                ->with('error', 'Error al cargar el pedido: ' . $e->getMessage());
+        }
+    }
+
+    public function imprimir($id)
+    {
+        try {
+            $pedido = Pedido::with([
+                'detalles' => function ($query) {
+                    $query->with('producto');
+                }
+            ])->findOrFail($id);
+
+            $pdf = Pdf::loadView('pedido.pedido_imprimir', compact('pedido'))
+                ->setPaper('a4', 'portrait');
+
+            return $pdf->stream('pedido_' . str_pad($pedido->id, 4, '0', STR_PAD_LEFT) . '.pdf');
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return redirect()->route('pedidos.index')
+                ->with('error', 'El pedido solicitado no existe.');
+        } catch (\Exception $e) {
+            return redirect()->route('pedidos.index')
+                ->with('error', 'Error al generar el PDF: ' . $e->getMessage());
+        }
+    }
 
     public function store(Request $request)
     {
@@ -73,7 +124,7 @@ class PedidoController extends Controller
             'productos.*.cantidad' => 'required|integer|min:1',
         ]);
 
-        $firebaseUid = 'Victor estuvo aqui'; // Reemplazar con auth real más adelante
+        $firebaseUid = 'Max Verstappen';
 
         DB::beginTransaction();
 
@@ -88,7 +139,6 @@ class PedidoController extends Controller
             ]);
 
             foreach ($request->productos as $item) {
-                // 🔒 Lock para evitar condiciones de carrera
                 $producto = Producto::where('id', $item['producto_id'])->lockForUpdate()->firstOrFail();
 
                 if ($producto->stock < $item['cantidad']) {
@@ -105,14 +155,12 @@ class PedidoController extends Controller
                     'precio_unitario' => $producto->precioUnitario
                 ]);
 
-                // 📉 Restar stock
                 $producto->stock -= $item['cantidad'];
                 $producto->save();
             }
 
             $pedido->update(['total' => $total]);
 
-            // 🧾 Crear preferencia de pago
             $preference = $this->crearPreferenciaMercadoPago($pedido, $detalles);
 
             DB::commit();
@@ -122,7 +170,6 @@ class PedidoController extends Controller
                 'mercado_pago_url' => $preference['init_point'],
                 'mercado_pago_id' => $preference['id']
             ], 201);
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -151,19 +198,19 @@ class PedidoController extends Controller
                 'items' => $items,
                 'external_reference' => $pedido->id,
                 'back_urls' => [
-                    'success' => env('APP_URL') . '/pago/success',
-                    'failure' => env('APP_URL') . '/pago/failure',
-                    'pending' => env('APP_URL') . '/pago/pending',
+                    'success' => env('FRONT_URL') . '/pago/success',
+                    'failure' => env('FRONT_URL') . '/pago/failure',
+                    'pending' => env('FRONT_URL') . '/pago/pending',
                 ],
+                'notification_url' => 'https://el-cartucho-git-dev-victor-s-projects-2bfad959.vercel.app/ed/webhook/mercadopago',
                 'auto_return' => 'approved',
+                'statement_descriptor' => 'ELCARTUCHO'
             ]);
 
         if (!$response->successful()) {
-            // Para desarrollo: mostrás el error
             throw new \Exception($response->json('message') ?? 'Error al crear preferencia', $response->status());
         }
 
         return $response->json();
     }
-
 }

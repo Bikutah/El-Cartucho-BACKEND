@@ -11,6 +11,8 @@ Route::get('/user', function (Request $request) {
 })->middleware('auth:sanctum');
 
 
+// Endpoints
+
 #Mercado Pago
 Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
 
@@ -18,4 +20,5 @@ Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
 Route::get('/producto/listar', [ProductoController::class, 'buscar']);
 
 #Pedidos
-Route::post('/pedido', [PedidoController::class, 'store']);
+Route::post('/pedido/crear', [PedidoController::class, 'store']);
+

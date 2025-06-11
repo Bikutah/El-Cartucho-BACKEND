@@ -46,7 +46,15 @@
                                 </option>
                             @endforeach
                         </select>
-
+                        <!-- Campo personalizado para subcategorías con checkboxes -->
+                        @if (isset($esProducto) && $esProducto)
+                                <div class="mb-3 mt-2">
+                                    <label class="form-label fw-semibold" style="color: var(--color-secundario);">Subcategorías</label>
+                                    <div id="subcategorias-container" class="border rounded p-2 bg-light">
+                                        <p class="mb-0">Seleccione primero una categoría para ver las subcategorías disponibles</p>
+                                    </div>
+                                </div>
+                        @endif
                     {{-- Campo TEXTAREA --}}
                     @elseif ($type === 'textarea')
                         <textarea
@@ -97,12 +105,14 @@
                 </div>
             @endforeach
 
-            <div class="d-flex mt-4">
-                <button type="submit" class="btn btn-primary">
-                    {{ $textoBoton ?? 'Guardar' }}
+            <div class="form-actions">
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i>
+                    <span class="btn-text">{{ $textoBoton ?? 'Guardar' }}</span>
                 </button>
-                <a href="{{ $rutaVolver }}" class="btn btn-outline-secondary ms-2">
-                    Volver
+                <a href="{{ $rutaVolver }}" class="btn-cancel">
+                    <i class="fas fa-arrow-left"></i>
+                    <span class="btn-text">Volver</span>
                 </a>
             </div>
         </form>

@@ -47,6 +47,7 @@ class ProductoController extends Controller
                     ['label' => 'Imágenes']
                 ],
                 'rutaEditar' => 'productos.edit',
+                'rutaEliminar' => 'productos.destroy',
                 'renderFila' => function ($producto) {
                     return '
                     <div class="table-cell">' . e($producto->id) . '</div>
@@ -56,8 +57,8 @@ class ProductoController extends Controller
                             data-bs-toggle="tooltip"
                             data-bs-placement="top"
                             title="' . e($producto->nombre) . '">'
-                                . e($producto->nombre) .
-                                '</span>
+                        . e($producto->nombre) .
+                        '</span>
                     </div>
                     <div class="table-cell descripcion">
                         <span class="table-cell-label">Descripción:</span>
@@ -65,8 +66,8 @@ class ProductoController extends Controller
                             data-bs-toggle="tooltip"
                             data-bs-placement="top"
                             title="' . e($producto->descripcion) . '">'
-                                . e($producto->descripcion) .
-                                '</span>
+                        . e($producto->descripcion) .
+                        '</span>
                     </div>
                     <div class="table-cell">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
                     <div class="table-cell">' . e($producto->stock) . '</div>
@@ -90,7 +91,7 @@ class ProductoController extends Controller
 
     public function create()
     {
-        $categorias = Categoria::all();
+        $categorias = Categoria::with('subcategorias')->get();
         return view('producto.producto_crear', compact('categorias'));
     }
 
@@ -102,45 +103,43 @@ class ProductoController extends Controller
             'precioUnitario' => 'required|numeric',
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',
+            'subcategorias' => 'nullable|array|min:0',
+            'subcategorias.*' => 'nullable|exists:subcategorias,id',
             'imagenes' => 'required|array|min:1|max:5',
             'imagenes.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ], [
-            // nombre
-            'nombre.required' => 'El nombre del producto es obligatorio.',
-            'nombre.string' => 'El nombre debe ser una cadena de texto.',
-            'nombre.max' => 'El nombre no puede tener más de 255 caracteres.',
-
-            // descripcion
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.string' => 'El nombre debe ser un texto válido.',
+            'nombre.max' => 'El nombre no puede exceder los 255 caracteres.',
             'descripcion.required' => 'La descripción es obligatoria.',
-            'descripcion.string' => 'La descripción debe ser una cadena de texto.',
-            'descripcion.max' => 'La descripción no puede tener más de 500 caracteres.',
-
-            // precioUnitario
+            'descripcion.string' => 'La descripción debe ser un texto válido.',
+            'descripcion.max' => 'La descripción no puede exceder los 500 caracteres.',
             'precioUnitario.required' => 'El precio unitario es obligatorio.',
-            'precioUnitario.numeric' => 'El precio unitario debe ser un número.',
-
-            // stock
+            'precioUnitario.numeric' => 'El precio unitario debe ser un número válido.',
             'stock.required' => 'El stock es obligatorio.',
             'stock.integer' => 'El stock debe ser un número entero.',
-
-            // categoria
-            'categoria_id.required' => 'Debe seleccionar una categoría.',
+            'categoria_id.required' => 'La categoría es obligatoria.',
             'categoria_id.exists' => 'La categoría seleccionada no es válida.',
-
-            // imágenes
-            'imagenes.required' => 'Debes subir al menos una imagen.',
-            'imagenes.array' => 'Las imágenes deben ser un arreglo válido.',
-            'imagenes.min' => 'Debes subir al menos una imagen.',
-            'imagenes.max' => 'No podés subir más de 5 imágenes.',
-            'imagenes.*.image' => 'Cada archivo debe ser una imagen.',
-            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo jpeg, png, jpg o gif.',
-            'imagenes.*.max' => 'Cada imagen no puede superar los 2MB.',
+            'subcategorias.array' => 'Las subcategorías deben ser un array válido.',
+            'subcategorias.*.exists' => 'Una o más subcategorías seleccionadas no son válidas.',
+            'imagenes.required' => 'Debe subir al menos una imagen.',
+            'imagenes.array' => 'Las imágenes deben ser proporcionadas en formato correcto.',
+            'imagenes.min' => 'Debe subir al menos una imagen.',
+            'imagenes.max' => 'No puede subir más de 5 imágenes.',
+            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida.',
+            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpeg, png, jpg, gif o webp.',
+            'imagenes.*.max' => 'Cada imagen no puede exceder los 2MB.',
         ]);
 
-        $data = $request->except('imagenes');
-
+        $data = $request->except(['imagenes', 'subcategorias']);
         $producto = Producto::create($data);
 
+        // Asociar subcategorías solo si existen y no están vacías
+        if ($request->has('subcategorias') && !empty(array_filter($request->subcategorias))) {
+            $producto->subcategorias()->sync(array_filter($request->subcategorias));
+        }
+
+        // ... resto del código para subir imágenes (sin cambios)
         $slugNombre = Str::slug($producto->nombre);
         $timestamp = time();
 
@@ -156,7 +155,7 @@ class ProductoController extends Controller
 
             $response = Http::asMultipart()->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
                 [
-                    'name'     => 'file',
+                    'name' => 'file',
                     'contents' => fopen($uploadedFile->getRealPath(), 'r'),
                     'filename' => $uploadedFile->getClientOriginalName(),
                 ],
@@ -179,9 +178,9 @@ class ProductoController extends Controller
             ]);
         }
 
-
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
     }
+
 
     public function show($id)
     {
@@ -190,12 +189,8 @@ class ProductoController extends Controller
 
     public function edit(Producto $producto)
     {
-        $categorias = Categoria::all();
-        if ($producto->categoria_id) {
-            $producto->categoria = Categoria::find($producto->categoria_id);
-        } else {
-            $producto->categoria = null;
-        }
+        $categorias = Categoria::with('subcategorias')->get();
+        $producto->load('subcategorias');
         return view('producto.producto_editar', compact('producto', 'categorias'));
     }
 
@@ -207,24 +202,47 @@ class ProductoController extends Controller
             'precioUnitario' => 'required|numeric',
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'subcategorias' => 'nullable|array|min:0',
+            'subcategorias.*' => 'nullable|exists:subcategorias,id',
+            'imagenes' => 'nullable|array|max:5',
+            'imagenes.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ], [
-            'nombre.required' => 'El nombre del producto es obligatorio.',
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.string' => 'El nombre debe ser un texto válido.',
+            'nombre.max' => 'El nombre no puede exceder los 255 caracteres.',
             'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.string' => 'La descripción debe ser un texto válido.',
+            'descripcion.max' => 'La descripción no puede exceder los 500 caracteres.',
             'precioUnitario.required' => 'El precio unitario es obligatorio.',
-            'precioUnitario.numeric' => 'El precio debe ser un número.',
+            'precioUnitario.numeric' => 'El precio unitario debe ser un número válido.',
             'stock.required' => 'El stock es obligatorio.',
             'stock.integer' => 'El stock debe ser un número entero.',
-            'categoria_id.required' => 'Debe seleccionar una categoría.',
+            'categoria_id.required' => 'La categoría es obligatoria.',
             'categoria_id.exists' => 'La categoría seleccionada no es válida.',
-            'imagen.image' => 'El archivo debe ser una imagen.',
-            'imagen.mimes' => 'La imagen debe ser de tipo jpeg, png, jpg o gif.',
-            'imagen.max' => 'La imagen no puede superar los 2MB.',
-            'imagen.required' => 'La imagen es obligatoria.',
+            'subcategorias.array' => 'Las subcategorías deben ser un array válido.',
+            'subcategorias.*.exists' => 'Una o más subcategorías seleccionadas no son válidas.',
+            'imagenes.array' => 'Las imágenes deben ser proporcionadas en formato correcto.',
+            'imagenes.max' => 'No puede subir más de 5 imágenes.',
+            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida.',
+            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpeg, png, jpg, gif o webp.',
+            'imagenes.*.max' => 'Cada imagen no puede exceder los 2MB.',
         ]);
 
         $producto = Producto::findOrFail($id);
-        $producto->update($request->all());
+        $producto->update($request->except('subcategorias', 'imagenes'));
+
+        // Sincronizar subcategorías (permite array vacío)
+        if ($request->has('subcategorias')) {
+            $subcategorias = array_filter($request->subcategorias ?? []);
+            $producto->subcategorias()->sync($subcategorias);
+        } else {
+            $producto->subcategorias()->sync([]);
+        }
+
+        // Manejar imágenes si se suben nuevas
+        if ($request->hasFile('imagenes')) {
+            // Aquí podrías agregar lógica para manejar nuevas imágenes si es necesario
+        }
 
         return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente');
     }
@@ -263,7 +281,7 @@ class ProductoController extends Controller
                 'signature'  => $signature,
             ]);
 
-            // Opcional: verificar respuesta y loguear si falla
+            // Podés validar $response si querés agregar control de errores
         }
 
         // Eliminar imágenes en base de datos
@@ -272,9 +290,12 @@ class ProductoController extends Controller
         // Eliminar el producto
         $producto->delete();
 
+        // Si es una petición AJAX, devolvé JSON
+        if (request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Producto eliminado correctamente.']);
+        }
+
+        // Si no, redireccioná como siempre
         return redirect()->route('productos.index')->with('success', 'Producto eliminado correctamente.');
     }
-    
 }
-
-
