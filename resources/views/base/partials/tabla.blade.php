@@ -18,7 +18,6 @@
                 <div class="table-row" data-id="{{ $item->id }}">
                     {!! $renderFila($item) !!}
                     <div class="table-cell actions w-auto">
-                        <span class="table-cell-label">Acciones</span>
                         <div class="d-flex gap-1">
                             @if (isset($rutaEditar))
                                 <a href="{{ route($rutaEditar, $item) }}" 
@@ -37,6 +36,21 @@
                                         title="Eliminar">
                                     <i class="fas fa-trash-alt"></i>
                                 </button>
+                            @endif
+                            @if (isset($rutaVer))
+                                <a href="{{ route($rutaVer, $item) }}" 
+                                   class="action-btn"
+                                   data-bs-toggle="tooltip" data-bs-placement="top" title="Ver detalles">
+                                    <i class="fas fa-eye"></i>
+                                </a>
+                            @endif
+                            @if (isset($rutaImprimir))
+                                <a href="{{ route($rutaImprimir, $item) }}" 
+                                   class="action-btn"
+                                   target="_blank"
+                                   data-bs-toggle="tooltip" data-bs-placement="top" title="Imprimir">
+                                    <i class="fas fa-print"></i>
+                                </a>
                             @endif
                         </div>
                     </div>

@@ -13,7 +13,8 @@ class Producto extends Model
         'descripcion',
         'precioUnitario',
         'stock',
-        'categoria_id'
+        'categoria_id',
+        'subcategoria_id',
     ];
     protected $casts = [
         'precioUnitario' => 'decimal:2',
@@ -27,7 +28,10 @@ class Producto extends Model
     {
         return $this->belongsTo(Categoria::class);
     }
-
+    public function subcategorias()
+    {
+        return $this->belongsToMany(Subcategoria::class, 'producto_subcategoria');
+    }
     public function getPrimeraImagenAttribute()
     {
         return $this->imagenes()->first();

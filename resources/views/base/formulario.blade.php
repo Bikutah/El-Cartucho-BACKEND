@@ -97,12 +97,14 @@
                 </div>
             @endforeach
 
-            <div class="d-flex mt-4">
-                <button type="submit" class="btn btn-primary">
-                    {{ $textoBoton ?? 'Guardar' }}
+            <div class="form-actions">
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i>
+                    <span class="btn-text">{{ $textoBoton ?? 'Guardar' }}</span>
                 </button>
-                <a href="{{ $rutaVolver }}" class="btn btn-outline-secondary ms-2">
-                    Volver
+                <a href="{{ $rutaVolver }}" class="btn-cancel">
+                    <i class="fas fa-arrow-left"></i>
+                    <span class="btn-text">Volver</span>
                 </a>
             </div>
         </form>
