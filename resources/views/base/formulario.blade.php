@@ -46,7 +46,15 @@
                                 </option>
                             @endforeach
                         </select>
-
+                        <!-- Campo personalizado para subcategorías con checkboxes -->
+                        @if (isset($esProducto) && $esProducto)
+                                <div class="mb-3 mt-2">
+                                    <label class="form-label fw-semibold" style="color: var(--color-secundario);">Subcategorías</label>
+                                    <div id="subcategorias-container" class="border rounded p-2 bg-light">
+                                        <p class="mb-0">Seleccione primero una categoría para ver las subcategorías disponibles</p>
+                                    </div>
+                                </div>
+                        @endif
                     {{-- Campo TEXTAREA --}}
                     @elseif ($type === 'textarea')
                         <textarea
