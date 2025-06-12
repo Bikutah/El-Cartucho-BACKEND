@@ -6,6 +6,7 @@
     $method = 'PUT';
     $rutaVolver = route('productos.index');
     $textoBoton = 'Actualizar';
+    $esProducto = true;
 
     // Prepare subcategorias data for JavaScript
     $subcategoriasData = $categorias->mapWithKeys(function ($categoria) {
@@ -52,14 +53,6 @@
             'value' => $producto->stock
         ],
         [
-            'name' => 'imagenes[]',
-            'label' => 'Imágenes del producto',
-            'type' => 'file',
-            'required' => false,
-            'multiple' => true,
-            'accept' => 'image/*',
-        ],
-        [
             'name' => 'categoria_id',
             'label' => 'Categoría',
             'placeholder' => 'Seleccione una categoría',
@@ -69,17 +62,6 @@
             'value' => $producto->categoria_id,
             'attributes' => ['id' => 'categoria_id'],
         ],
-        [
-            'name' => 'subcategorias[]',
-            'label' => 'Subcategorías',
-            'placeholder' => 'Seleccione una o más subcategorías',
-            'type' => 'select',
-            'options' => [],
-            'required' => false,
-            'multiple' => true,
-            'value' => $producto->subcategorias->pluck('id')->toArray(),
-            'attributes' => ['id' => 'subcategorias'],
-        ],
     ];
 @endphp
 
@@ -87,39 +69,66 @@
 <input type="hidden" id="selected-subcategorias" value="{{ json_encode($producto->subcategorias->pluck('id')->toArray()) }}">
 
 @push('scripts')
-    <script>
-        (function () {
-            const categoriaSelect = document.getElementById('categoria_id');
-            const subcategoriasSelect = document.getElementById('subcategorias');
-            const subcategoriasDataInput = document.getElementById('subcategorias-data');
-            const selectedSubcategoriasInput = document.getElementById('selected-subcategorias');
-            
-            const subcategoriasData = JSON.parse(subcategoriasDataInput.value || '{}');
-            const selectedSubcategorias = JSON.parse(selectedSubcategoriasInput.value || '[]');
+    @if (isset($esProducto) && $esProducto)
+        <script>
+            (function () {
+                const categoriaSelect = document.getElementById('categoria_id');
+                const subcategoriasContainer = document.getElementById('subcategorias-container');
+                const subcategoriasDataInput = document.getElementById('subcategorias-data');
+                const selectedSubcategoriasInput = document.getElementById('selected-subcategorias');
+                
+                const subcategoriasData = JSON.parse(subcategoriasDataInput.value || '{}');
+                const selectedSubcategorias = JSON.parse(selectedSubcategoriasInput.value || '[]');
 
-            function updateSubcategorias() {
-                const categoriaId = categoriaSelect.value;
-                subcategoriasSelect.innerHTML = '<option value="">Seleccione una o más subcategorías</option>';
+                function updateSubcategorias() {
+                    const categoriaId = categoriaSelect.value;
+                    subcategoriasContainer.innerHTML = '';
 
-                if (categoriaId && subcategoriasData[categoriaId]) {
-                    const subcategorias = subcategoriasData[categoriaId].subcategorias;
-                    for (const [id, nombre] of Object.entries(subcategorias)) {
-                        const option = document.createElement('option');
-                        option.value = id;
-                        option.text = nombre;
+                    if (categoriaId && subcategoriasData[categoriaId]) {
+                        const subcategorias = subcategoriasData[categoriaId].subcategorias;
                         
-                        // Marcar como seleccionada si está en el array de subcategorías seleccionadas
-                        if (selectedSubcategorias.includes(parseInt(id))) {
-                            option.selected = true;
+                        if (Object.keys(subcategorias).length > 0) {
+                            const title = document.createElement('p');
+                            title.className = 'mb-2 fw-bold';
+                            title.textContent = 'Subcategorías disponibles:';
+                            subcategoriasContainer.appendChild(title);
+
+                            for (const [id, nombre] of Object.entries(subcategorias)) {
+                                const checkboxDiv = document.createElement('div');
+                                checkboxDiv.className = 'form-check';
+                                
+                                const checkbox = document.createElement('input');
+                                checkbox.className = 'form-check-input';
+                                checkbox.type = 'checkbox';
+                                checkbox.name = 'subcategorias[]';
+                                checkbox.value = id;
+                                checkbox.id = `subcategoria_${id}`;
+                                
+                                // Marcar como seleccionada si está en el array de subcategorías seleccionadas
+                                if (selectedSubcategorias.includes(parseInt(id))) {
+                                    checkbox.checked = true;
+                                }
+                                
+                                const label = document.createElement('label');
+                                label.className = 'form-check-label';
+                                label.htmlFor = `subcategoria_${id}`;
+                                label.textContent = nombre;
+                                
+                                checkboxDiv.appendChild(checkbox);
+                                checkboxDiv.appendChild(label);
+                                subcategoriasContainer.appendChild(checkboxDiv);
+                            }
+                        } else {
+                            subcategoriasContainer.innerHTML = '<p class="text-muted mb-0">No hay subcategorías disponibles para esta categoría</p>';
                         }
-                        
-                        subcategoriasSelect.appendChild(option);
+                    } else {
+                        subcategoriasContainer.innerHTML = '<p class="text-muted mb-0">Seleccione primero una categoría para ver las subcategorías disponibles</p>';
                     }
                 }
-            }
 
-            categoriaSelect.addEventListener('change', updateSubcategorias);
-            updateSubcategorias(); // Inicializar al cargar la página
-        })();
-    </script>
+                categoriaSelect.addEventListener('change', updateSubcategorias);
+                updateSubcategorias(); // Inicializar al cargar la página
+            })();
+        </script>
+    @endif
 @endpush

@@ -103,25 +103,43 @@ class ProductoController extends Controller
             'precioUnitario' => 'required|numeric',
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',
-            'subcategorias' => 'nullable|array', // Validar que subcategorias sea un arreglo
-            'subcategorias.*' => 'exists:subcategorias,id', // Cada subcategoría debe existir
+            'subcategorias' => 'nullable|array|min:0',
+            'subcategorias.*' => 'nullable|exists:subcategorias,id',
             'imagenes' => 'required|array|min:1|max:5',
             'imagenes.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ], [
-            // ... otros mensajes de error ...
-            'subcategorias.array' => 'Las subcategorías deben ser un arreglo válido.',
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.string' => 'El nombre debe ser un texto válido.',
+            'nombre.max' => 'El nombre no puede exceder los 255 caracteres.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.string' => 'La descripción debe ser un texto válido.',
+            'descripcion.max' => 'La descripción no puede exceder los 500 caracteres.',
+            'precioUnitario.required' => 'El precio unitario es obligatorio.',
+            'precioUnitario.numeric' => 'El precio unitario debe ser un número válido.',
+            'stock.required' => 'El stock es obligatorio.',
+            'stock.integer' => 'El stock debe ser un número entero.',
+            'categoria_id.required' => 'La categoría es obligatoria.',
+            'categoria_id.exists' => 'La categoría seleccionada no es válida.',
+            'subcategorias.array' => 'Las subcategorías deben ser un array válido.',
             'subcategorias.*.exists' => 'Una o más subcategorías seleccionadas no son válidas.',
+            'imagenes.required' => 'Debe subir al menos una imagen.',
+            'imagenes.array' => 'Las imágenes deben ser proporcionadas en formato correcto.',
+            'imagenes.min' => 'Debe subir al menos una imagen.',
+            'imagenes.max' => 'No puede subir más de 5 imágenes.',
+            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida.',
+            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpeg, png, jpg, gif o webp.',
+            'imagenes.*.max' => 'Cada imagen no puede exceder los 2MB.',
         ]);
 
         $data = $request->except(['imagenes', 'subcategorias']);
         $producto = Producto::create($data);
 
-        // Asociar subcategorías
-        if ($request->filled('subcategorias')) {
-            $producto->subcategorias()->sync($request->subcategorias);
+        // Asociar subcategorías solo si existen y no están vacías
+        if ($request->has('subcategorias') && !empty(array_filter($request->subcategorias))) {
+            $producto->subcategorias()->sync(array_filter($request->subcategorias));
         }
 
-        // Código para subir imágenes a Cloudinary (sin cambios)
+        // ... resto del código para subir imágenes (sin cambios)
         $slugNombre = Str::slug($producto->nombre);
         $timestamp = time();
 
@@ -163,6 +181,7 @@ class ProductoController extends Controller
         return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
     }
 
+
     public function show($id)
     {
         return view('productos.show', compact('id'));
@@ -183,19 +202,47 @@ class ProductoController extends Controller
             'precioUnitario' => 'required|numeric',
             'stock' => 'required|integer',
             'categoria_id' => 'required|exists:categorias,id',
-            'subcategorias' => 'nullable|array',
-            'subcategorias.*' => 'exists:subcategorias,id',
-            'imagen' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+            'subcategorias' => 'nullable|array|min:0',
+            'subcategorias.*' => 'nullable|exists:subcategorias,id',
+            'imagenes' => 'nullable|array|max:5',
+            'imagenes.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
         ], [
-            // ... otros mensajes de error ...
-            'subcategorias.array' => 'Las subcategorías deben ser un arreglo válido.',
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.string' => 'El nombre debe ser un texto válido.',
+            'nombre.max' => 'El nombre no puede exceder los 255 caracteres.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.string' => 'La descripción debe ser un texto válido.',
+            'descripcion.max' => 'La descripción no puede exceder los 500 caracteres.',
+            'precioUnitario.required' => 'El precio unitario es obligatorio.',
+            'precioUnitario.numeric' => 'El precio unitario debe ser un número válido.',
+            'stock.required' => 'El stock es obligatorio.',
+            'stock.integer' => 'El stock debe ser un número entero.',
+            'categoria_id.required' => 'La categoría es obligatoria.',
+            'categoria_id.exists' => 'La categoría seleccionada no es válida.',
+            'subcategorias.array' => 'Las subcategorías deben ser un array válido.',
             'subcategorias.*.exists' => 'Una o más subcategorías seleccionadas no son válidas.',
+            'imagenes.array' => 'Las imágenes deben ser proporcionadas en formato correcto.',
+            'imagenes.max' => 'No puede subir más de 5 imágenes.',
+            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida.',
+            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpeg, png, jpg, gif o webp.',
+            'imagenes.*.max' => 'Cada imagen no puede exceder los 2MB.',
         ]);
 
         $producto = Producto::findOrFail($id);
-        $producto->update($request->except('subcategorias'));
+        $producto->update($request->except('subcategorias', 'imagenes'));
 
-        $producto->subcategorias()->sync($request->subcategorias ?? []);
+        // Sincronizar subcategorías (permite array vacío)
+        if ($request->has('subcategorias')) {
+            $subcategorias = array_filter($request->subcategorias ?? []);
+            $producto->subcategorias()->sync($subcategorias);
+        } else {
+            $producto->subcategorias()->sync([]);
+        }
+
+        // Manejar imágenes si se suben nuevas
+        if ($request->hasFile('imagenes')) {
+            // Aquí podrías agregar lógica para manejar nuevas imágenes si es necesario
+        }
 
         return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente');
     }
