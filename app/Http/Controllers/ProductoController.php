@@ -202,7 +202,7 @@ class ProductoController extends Controller
 
     public function buscar(Request $request)
     {
-        $productos = Producto::with(['categoria'])->paginate(10);
+        $productos = Producto::with(['categoria'])->paginate(8);
 
         return ProductoResource::collection($productos);
     }
