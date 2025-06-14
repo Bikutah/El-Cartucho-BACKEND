@@ -253,6 +253,21 @@ class ProductoController extends Controller
 
         return ProductoResource::collection($productos);
     }
+    public function obtenerProductoConResource($id)
+    {
+        try {
+            $producto = Producto::with(['categoria', 'subcategorias', 'imagenes'])
+                ->findOrFail($id);
+
+            return new ProductoResource($producto);
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Producto no encontrado.',
+                'error' => 'El producto con ID ' . $id . ' no existe.'
+            ], 404);
+        }
+    }
 
     public function verImagenes(Producto $producto)
     {
