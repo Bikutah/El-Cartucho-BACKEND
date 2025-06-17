@@ -8,6 +8,7 @@ use App\Models\Categoria;
 use Cloudinary\Cloudinary;
 use Illuminate\Support\Facades\Http;
 use App\Http\Resources\ProductoResource;
+use App\Http\Resources\ProductoDetalleResource;
 use Illuminate\Support\Str;
 
 
@@ -253,13 +254,16 @@ class ProductoController extends Controller
 
         return ProductoResource::collection($productos);
     }
+
     public function obtenerProductoConResource($id)
     {
         try {
             $producto = Producto::with(['categoria', 'subcategorias', 'imagenes'])
                 ->findOrFail($id);
 
-            return new ProductoResource($producto);
+            return response()->json(
+                (new ProductoDetalleResource($producto))->toArray(request())
+            );
         } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
             return response()->json([
                 'success' => false,
