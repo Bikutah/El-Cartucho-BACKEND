@@ -19,8 +19,8 @@ class ProductoDetalleResource extends JsonResource
             'nombre' => $this->nombre,
             'precio' => $this->precioUnitario,
             'imagen' => $this->primera_imagen?->imagen_url ?? null,
-            'categoria' => $this->categoria->nombre,
-            'subcategoria' => $this->categoria->nombre,
+            'categoria' => $this->categoria?->nombre ?? null,
+            'subcategorias' => $this->subcategorias->pluck('nombre'), 
             'descripcion' => $this->descripcion,
             'stock' => $this->stock
         ];
