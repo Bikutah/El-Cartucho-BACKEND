@@ -8,6 +8,7 @@ use App\Models\Producto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use App\Exceptions\CodigoPostalNoEncontradoException;
 use Barryvdh\DomPDF\Facade\Pdf;
 
 class PedidoController extends Controller
@@ -116,6 +117,49 @@ class PedidoController extends Controller
         }
     }
 
+    /*
+     * Método para calcular el costo de envío basado en el código postal.
+     * 
+     * @param Request $request
+     * @return \Illuminate\Http\JsonResponse
+     */
+
+    public function calcularCostoEnvio($cp)
+    {
+        // Verificar que el CP exista en Argentina
+        $this->validarCodigoPostal($cp);
+
+        // Mock del costo según código postal
+        $costoEnvio = random_int(7000, 20000);
+
+        return response()->json([
+            'costo_envio' => $costoEnvio,
+        ]);
+    }
+
+   private function validarCodigoPostal($cp)
+    {
+        // Consulta a la API
+        $response = Http::get("http://api.zippopotam.us/ar/{$cp}");
+
+        // Verifica que la respuesta sea exitosa
+        if (!$response->successful()) {
+            throw new CodigoPostalNoEncontradoException();
+        }
+
+        // Extrae el JSON
+        $data = $response->json();
+
+        // Si no contiene el array de lugares o está vacío, también es inválido
+        if (!isset($data['places']) || empty($data['places'])) {
+            throw new CodigoPostalNoEncontradoException();
+        }
+
+        // Todo ok, opcional: podés devolver datos si los querés usar
+        return $data;
+    }
+
+
     public function store(Request $request)
     {
         $request->validate([
@@ -213,4 +257,6 @@ class PedidoController extends Controller
 
         return $response->json();
     }
+
+
 }

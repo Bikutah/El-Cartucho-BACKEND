@@ -23,3 +23,4 @@ Route::get('/producto/{id}', [ProductoController::class, 'obtenerProductoConReso
 #Pedidos
 Route::post('/pedido/crear', [PedidoController::class, 'store']);
 
+Route::get('/pedido/costo/{cp}', [PedidoController::class, 'calcularCostoEnvio']);
