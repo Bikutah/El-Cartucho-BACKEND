@@ -250,7 +250,29 @@ class ProductoController extends Controller
 
     public function buscar(Request $request)
     {
-        $productos = Producto::with(['categoria'])->paginate(8);
+        $request->validate([
+            'categoria_id' => 'nullable|exists:categorias,id',
+            'subcategorias' => 'nullable|array',
+            'subcategorias.*' => 'exists:subcategorias,id',
+        ]);
+
+
+        $query = Producto::with(['categoria', 'subcategorias']);
+
+        // Filtro por categoría principal
+        if ($request->filled('categoria_id')) {
+            $query->where('categoria_id', $request->categoria_id);
+        }
+
+        // Filtro por subcategorías (muchos a muchos)
+        if ($request->filled('subcategorias')) {
+            $subcategorias = $request->input('subcategorias');
+            $query->whereHas('subcategorias', function ($q) use ($subcategorias) {
+                $q->whereIn('subcategoria_id', $subcategorias);
+            });
+        }
+
+        $productos = $query->paginate(8);
 
         return ProductoResource::collection($productos);
     }
