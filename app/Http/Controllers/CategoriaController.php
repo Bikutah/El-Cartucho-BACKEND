@@ -10,6 +10,15 @@ class CategoriaController extends Controller
     /**
      * Display a listing of the resource.
      */
+
+     public function apiList(Request $request)
+    {
+        $categorias = Categoria::with('subcategorias')->get();
+
+        return response()->json($categorias);
+    }
+
+
     public function index(Request $request)
     {
         $query = Categoria::query();

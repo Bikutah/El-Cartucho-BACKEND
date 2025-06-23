@@ -5,6 +5,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\PedidoController;
 use App\Http\Controllers\WebhookController;
+use App\Http\Controllers\CategoriaController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -24,3 +25,5 @@ Route::get('/producto/{id}', [ProductoController::class, 'obtenerProductoConReso
 Route::post('/pedido/crear', [PedidoController::class, 'store']);
 
 Route::get('/pedido/costo/{cp}', [PedidoController::class, 'calcularCostoEnvio']);
+
+Route::get('/categorias', [CategoriaController::class, 'apiList']);
