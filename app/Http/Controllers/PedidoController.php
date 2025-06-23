@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use App\Exceptions\CodigoPostalNoEncontradoException;
 use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Str;
 
 class PedidoController extends Controller
 {
@@ -17,34 +18,139 @@ class PedidoController extends Controller
     {
         $query = Pedido::with(['detalles.producto']);
 
+        // Aplicar filtros
         if ($request->filled('id')) {
-            $query->where('id', $request->id);
+            $query->where('id', $request->input('id'));
         }
 
         if ($request->filled('firebase_uid')) {
-            $query->where('firebase_uid', 'like', '%' . $request->firebase_uid . '%');
+            $query->where('firebase_uid', 'like', '%' . $request->input('firebase_uid') . '%');
         }
 
         if ($request->filled('estado')) {
-            $query->where('estado', $request->estado);
+            $query->where('estado', $request->input('estado'));
         }
 
         if ($request->filled('total_min')) {
-            $query->where('total', '>=', $request->total_min);
+            $query->where('total', '>=', floatval($request->input('total_min')));
         }
 
         if ($request->filled('total_max')) {
-            $query->where('total', '<=', $request->total_max);
+            $query->where('total', '<=', floatval($request->input('total_max')));
         }
 
+        // Paginación
         $pedidos = $query->orderByDesc('created_at')->paginate(10)->withQueryString();
+
+        // Filtros para la vista
+        $filtros = [
+            ['name' => 'id', 'placeholder' => 'Buscar por ID del pedido'],
+            ['name' => 'firebase_uid', 'placeholder' => 'UID de Usuario'],
+            [
+                'name' => 'estado',
+                'placeholder' => 'Filtrar por estado',
+                'type' => 'select',
+                'options' => [
+                    'pendiente' => 'Pendiente',
+                    'pagado' => 'Pagado',
+                    'cancelado' => 'Cancelado'
+                ]
+            ],
+            ['name' => 'total_min', 'placeholder' => 'Total mínimo ($)'],
+            ['name' => 'total_max', 'placeholder' => 'Total máximo ($)']
+        ];
+
+        // Reutilizar renderFila
+        $renderFila = function ($pedido) {
+            $getEstadoBadge = function ($estado) {
+                $badges = [
+                    'pendiente' => '<span class="status-badge status-pending">
+                    <i class="fas fa-clock"></i><span>Pendiente</span>
+                </span>',
+                    'pagado' => '<span class="status-badge status-paid">
+                    <i class="fas fa-check-circle"></i><span>Pagado</span>
+                </span>',
+                    'cancelado' => '<span class="status-badge status-cancelled">
+                    <i class="fas fa-times-circle"></i><span>Cancelado</span>
+                </span>'
+                ];
+                return $badges[$estado] ?? '<span class="status-badge status-unknown">Desconocido</span>';
+            };
+
+            $productosResumen = collect($pedido->detalles)->map(function ($detalle) {
+                $nombreProducto = optional($detalle->producto)->nombre ?? 'Producto eliminado';
+                return [
+                    'nombre' => $nombreProducto,
+                    'cantidad' => $detalle->cantidad,
+                    'precio' => $detalle->precio_unitario
+                ];
+            });
+
+            $totalProductos = $productosResumen->sum('cantidad');
+            $primerProducto = $productosResumen->first();
+
+            return '
+            <div class="table-cell" data-label="ID">
+                <span class="table-cell-label">ID:</span>
+                <div class="order-id">
+                    <span class="order-number">#' . str_pad($pedido->id, 4, '0', STR_PAD_LEFT) . '</span>
+                </div>
+            </div>
+            <div class="table-cell" data-label="Cliente">
+                <span class="table-cell-label">Cliente:</span>
+                <div class="customer-info">
+                    <div class="customer-details">
+                        <span class="customer-uid truncate-15" 
+                              data-bs-toggle="tooltip" 
+                              data-bs-placement="top" 
+                              title="' . e($pedido->firebase_uid) . '">
+                            ' . e(Str::limit($pedido->firebase_uid, 12)) . '
+                        </span>
+                    </div>
+                </div>
+            </div>
+            <div class="table-cell" data-label="Estado">
+                <span class="table-cell-label">Estado:</span>
+                ' . $getEstadoBadge($pedido->estado) . '
+            </div>
+            <div class="table-cell" data-label="Total">
+                <span class="table-cell-label">Total:</span>
+                <div class="order-total">
+                    <span class="amount">$' . number_format($pedido->total, 2, ',', '.') . '</span>
+                    <small class="currency">ARS</small>
+                </div>
+            </div>
+            <div class="table-cell" data-label="Fecha">
+                <span class="table-cell-label">Fecha:</span>
+                <div class="order-date">
+                    <span class="date">' . $pedido->created_at->format('d/m/Y') . '</span>
+                    <small class="time">' . $pedido->created_at->format('H:i') . '</small>
+                </div>
+            </div>
+            <div class="table-cell" data-label="Productos">
+                <span class="table-cell-label">Productos:</span>
+                <div class="products-summary">
+                    ' . ($primerProducto ? '
+                        <div class="product-item">
+                            <span class="product-name">' . e(Str::limit($primerProducto['nombre'], 20)) . '</span>
+                            <span class="product-quantity">x' . $primerProducto['cantidad'] . '</span>
+                        </div>
+                    ' : '<span class="no-products">Sin productos</span>') . '
+                    ' . ($totalProductos > 1 ? '
+                        <div class="more-products">
+                            <span class="more-count">+' . ($totalProductos - 1) . ' más</span>
+                        </div>
+                    ' : '') . '
+                </div>
+            </div>';
+        };
 
         if ($request->ajax()) {
             return view('base.partials.tabla', [
                 'items' => $pedidos,
                 'columnas' => [
                     ['label' => 'ID'],
-                    ['label' => 'Usuario (UID)'],
+                    ['label' => 'Cliente'],
                     ['label' => 'Estado'],
                     ['label' => 'Total'],
                     ['label' => 'Fecha'],
@@ -52,28 +158,19 @@ class PedidoController extends Controller
                 ],
                 'rutaVer' => 'pedidos.show',
                 'rutaImprimir' => 'pedidos.imprimir',
-                'renderFila' => function ($pedido) {
-                    $productosHtml = collect($pedido->detalles)->map(function ($detalle) {
-                        return '<li>' . e($detalle->producto->nombre ?? 'Producto eliminado') .
-                            ' x' . $detalle->cantidad .
-                            ' ($' . number_format($detalle->precio_unitario, 2, ',', '.') . ')</li>';
-                    })->implode('');
-
-                    return '
-                        <div class="table-cell">' . $pedido->id . '</div>
-                        <div class="table-cell">' . e($pedido->firebase_uid) . '</div>
-                        <div class="table-cell">' . ucfirst($pedido->estado) . '</div>
-                        <div class="table-cell">$' . number_format($pedido->total, 2, ',', '.') . '</div>
-                        <div class="table-cell">' . $pedido->created_at->format('d/m/Y H:i') . '</div>
-                        <div class="table-cell"><ul class="mb-0">' . $productosHtml . '</ul></div>
-                    ';
-                }
+                'renderFila' => $renderFila
             ])->render();
         }
 
-        return view('pedido.pedido_listar', compact('pedidos'));
+        return view('pedido.pedido_listar', [
+            'pedidos' => $pedidos,
+            'filtros' => $filtros,
+            'renderFila' => $renderFila
+        ]);
     }
-    
+
+
+
     public function show($id)
     {
         try {
