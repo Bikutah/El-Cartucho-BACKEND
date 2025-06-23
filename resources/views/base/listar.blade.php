@@ -88,6 +88,7 @@ $(document).ready(function () {
     $(document).on('click', '.pagination a', function (e) {
         e.preventDefault();
         let url = $(this).attr('href');
+        url = url.replace(/^http:/, 'https:');
         $.ajax({
             url: url,
             type: 'GET',
