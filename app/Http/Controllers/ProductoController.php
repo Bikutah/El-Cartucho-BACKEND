@@ -5,11 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use Illuminate\Http\Request;
 use App\Models\Categoria;
-use Cloudinary\Cloudinary;
 use Illuminate\Support\Facades\Http;
 use App\Http\Resources\ProductoResource;
 use App\Http\Resources\ProductoDetalleResource;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 
 class ProductoController extends Controller
@@ -273,6 +273,29 @@ class ProductoController extends Controller
         }
 
         $productos = $query->paginate(8);
+
+        return ProductoResource::collection($productos);
+    }
+
+    public function obtenerProductosRecientes()
+    {
+        $productos = Producto::with(['categoria', 'imagenes'])
+            ->orderBy('created_at', 'desc')
+            ->take(6)
+            ->get();
+
+        return ProductoResource::collection($productos);
+    }
+
+    public function obtenerProductosMasVendidos()
+    {
+        $productos = Producto::with(['categoria', 'imagenes'])
+            ->select('productos.*', DB::raw('SUM(detalle_pedido.cantidad) as total_vendido'))
+            ->join('detalle_pedido', 'productos.id', '=', 'detalle_pedido.producto_id')
+            ->groupBy('productos.id')
+            ->orderByDesc('total_vendido')
+            ->take(6) 
+            ->get();
 
         return ProductoResource::collection($productos);
     }

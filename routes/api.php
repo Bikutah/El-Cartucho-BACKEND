@@ -20,6 +20,8 @@ Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
 #Productos
 Route::get('/producto/listar', [ProductoController::class, 'buscar']);
 Route::get('/producto/{id}', [ProductoController::class, 'obtenerProductoConResource']);
+Route::get('/productosRecientes', [ProductoController::class, 'obtenerProductosRecientes']);
+Route::get('/productosMasVendidos', [ProductoController::class, 'obtenerProductosMasVendidos']);
 
 #Pedidos
 Route::post('/pedido/crear', [PedidoController::class, 'store']);
