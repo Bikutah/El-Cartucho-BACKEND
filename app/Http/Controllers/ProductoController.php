@@ -5,10 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Producto;
 use Illuminate\Http\Request;
 use App\Models\Categoria;
-use Cloudinary\Cloudinary;
 use Illuminate\Support\Facades\Http;
 use App\Http\Resources\ProductoResource;
+use App\Http\Resources\ProductoDetalleResource;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 
 class ProductoController extends Controller
@@ -249,9 +250,72 @@ class ProductoController extends Controller
 
     public function buscar(Request $request)
     {
-        $productos = Producto::with(['categoria'])->paginate(10);
+        $request->validate([
+            'categoria_id' => 'nullable|exists:categorias,id',
+            'subcategorias' => 'nullable|array',
+            'subcategorias.*' => 'exists:subcategorias,id',
+        ]);
+
+
+        $query = Producto::with(['categoria', 'subcategorias']);
+
+        // Filtro por categoría principal
+        if ($request->filled('categoria_id')) {
+            $query->where('categoria_id', $request->categoria_id);
+        }
+
+        // Filtro por subcategorías (muchos a muchos)
+        if ($request->filled('subcategorias')) {
+            $subcategorias = $request->input('subcategorias');
+            $query->whereHas('subcategorias', function ($q) use ($subcategorias) {
+                $q->whereIn('subcategoria_id', $subcategorias);
+            });
+        }
+
+        $productos = $query->paginate(8);
 
         return ProductoResource::collection($productos);
+    }
+
+    public function obtenerProductosRecientes()
+    {
+        $productos = Producto::with(['categoria', 'imagenes'])
+            ->orderBy('created_at', 'desc')
+            ->take(6)
+            ->get();
+
+        return ProductoResource::collection($productos);
+    }
+
+    public function obtenerProductosMasVendidos()
+    {
+        $productos = Producto::with(['categoria', 'imagenes'])
+            ->select('productos.*', DB::raw('SUM(detalle_pedido.cantidad) as total_vendido'))
+            ->join('detalle_pedido', 'productos.id', '=', 'detalle_pedido.producto_id')
+            ->groupBy('productos.id')
+            ->orderByDesc('total_vendido')
+            ->take(6) 
+            ->get();
+
+        return ProductoResource::collection($productos);
+    }
+
+    public function obtenerProductoConResource($id)
+    {
+        try {
+            $producto = Producto::with(['categoria', 'subcategorias', 'imagenes'])
+                ->findOrFail($id);
+
+            return response()->json(
+                (new ProductoDetalleResource($producto))->toArray(request())
+            );
+        } catch (\Illuminate\Database\Eloquent\ModelNotFoundException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Producto no encontrado.',
+                'error' => 'El producto con ID ' . $id . ' no existe.'
+            ], 404);
+        }
     }
 
     public function verImagenes(Producto $producto)

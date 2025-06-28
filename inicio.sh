@@ -5,7 +5,7 @@
 DB_NAME="el_cartucho_db"
 DB_PATH="./database/database.sqlite"
 ADMIN_EMAIL="admin@admin.com"
-ADMIN_PASSWORD="admin"  # ¡Solo para desarrollo!
+ADMIN_PASSWORD="cccccc"  # ¡Solo para desarrollo!
 
 # Paso 1: Crear archivo SQLite si no existe
 echo "🔧 Creando base de datos SQLite en $DB_PATH..."
