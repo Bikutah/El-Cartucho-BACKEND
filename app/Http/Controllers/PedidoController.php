@@ -343,7 +343,7 @@ class PedidoController extends Controller
                     'failure' => env('FRONT_URL') . '/pago/failure',
                     'pending' => env('FRONT_URL') . '/pago/pending',
                 ],
-                'notification_url' => 'https://el-cartucho-git-dev-victor-s-projects-2bfad959.vercel.app/ed/webhook/mercadopago',
+                'notification_url' => 'https://el-cartucho.vercel.app/ed/webhook/mercadopago',
                 'auto_return' => 'approved',
                 'statement_descriptor' => 'ELCARTUCHO'
             ]);
