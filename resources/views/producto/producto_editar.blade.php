@@ -4,7 +4,7 @@
     $titulo = 'Editar Producto';
     $action = route('productos.update', $producto);
     $method = 'PUT';
-    $rutaVolver = route('productos.index');
+    $rutaVolver = session('productos.listado_url', route('productos.index'));
     $textoBoton = 'Actualizar';
     $esProducto = true;
 

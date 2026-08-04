@@ -34,7 +34,7 @@
                                 <input type="hidden" name="producto_id" value="{{ $producto->id }}">
                             </form>
 
-                            <a href="{{ route('productos.index') }}" class="btn-back">
+                            <a href="{{ session('productos.listado_url', route('productos.index')) }}" class="btn-back">
                                 <i class="fas fa-arrow-left"></i>
                                 <span class="btn-text">Volver</span>
                             </a>
