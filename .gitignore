@@ -23,3 +23,6 @@ yarn-error.log
 # NO ignores esto si querés que estén en GitHub
 .api/index.php
 .vercel
+
+.vercel
+.env*

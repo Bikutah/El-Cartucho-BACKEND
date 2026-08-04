@@ -10,6 +10,7 @@ use App\Http\Resources\ProductoResource;
 use App\Http\Resources\ProductoDetalleResource;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use App\Http\Requests\BuscarProductosRequest;
 
 
 class ProductoController extends Controller
@@ -17,6 +18,14 @@ class ProductoController extends Controller
 
     public function index(Request $request)
     {
+        $request->validate([
+            'nombre' => 'nullable|string|max:100',
+            'stock' => 'nullable|integer|min:0',
+            'categoria' => 'nullable|string|max:100',
+        ]);
+
+        session(['productos.listado_url' => url()->full()]);
+
         $query = Producto::with(['categoria', 'imagenes']);
 
         if ($request->filled('nombre')) {
@@ -24,7 +33,7 @@ class ProductoController extends Controller
         }
 
         if ($request->filled('stock')) {
-            $query->where('stock', 'like', '%' . $request->stock . '%');
+            $query->where('stock', $request->stock);
         }
 
         if ($request->filled('categoria')) {
@@ -248,31 +257,53 @@ class ProductoController extends Controller
         return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente');
     }
 
-    public function buscar(Request $request)
+    public function buscar(BuscarProductosRequest $request)
     {
-        $request->validate([
-            'categoria_id' => 'nullable|exists:categorias,id',
-            'subcategorias' => 'nullable|array',
-            'subcategorias.*' => 'exists:subcategorias,id',
-        ]);
+        $validated = $request->validated();
 
+        $query = Producto::with(['categoria', 'subcategorias', 'imagenes']);
 
-        $query = Producto::with(['categoria', 'subcategorias']);
-
-        // Filtro por categoría principal
-        if ($request->filled('categoria_id')) {
-            $query->where('categoria_id', $request->categoria_id);
+        if (!empty($validated['q'])) {
+            $q = $validated['q'];
+            $query->where(function ($sub) use ($q) {
+                $sub->where('nombre', 'like', "%{$q}%")
+                    ->orWhere('descripcion', 'like', "%{$q}%");
+            });
         }
 
-        // Filtro por subcategorías (muchos a muchos)
-        if ($request->filled('subcategorias')) {
-            $subcategorias = $request->input('subcategorias');
+        if (!empty($validated['categoria_id'])) {
+            $query->where('categoria_id', $validated['categoria_id']);
+        }
+
+        if (!empty($validated['subcategorias'])) {
+            $subcategorias = $validated['subcategorias'];
             $query->whereHas('subcategorias', function ($q) use ($subcategorias) {
                 $q->whereIn('subcategoria_id', $subcategorias);
             });
         }
 
-        $productos = $query->paginate(8);
+        if (isset($validated['precio_min'])) {
+            $query->where('precioUnitario', '>=', $validated['precio_min']);
+        }
+
+        if (isset($validated['precio_max'])) {
+            $query->where('precioUnitario', '<=', $validated['precio_max']);
+        }
+
+        $orden = $validated['orden'] ?? 'created_at';
+        $columnMap = [
+            'nombre' => 'nombre',
+            'precio' => 'precioUnitario',
+            'created_at' => 'created_at',
+        ];
+        $sortColumn = $columnMap[$orden] ?? 'created_at';
+        $dir = $validated['dir'] ?? 'desc';
+
+        $query->orderBy($sortColumn, $dir);
+
+        $perPage = $validated['per_page'] ?? 8;
+
+        $productos = $query->paginate($perPage)->withQueryString();
 
         return ProductoResource::collection($productos);
     }

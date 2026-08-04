@@ -34,6 +34,6 @@ class Producto extends Model
     }
     public function getPrimeraImagenAttribute()
     {
-        return $this->imagenes()->first();
+        return $this->imagenes->first();
     }
 }
