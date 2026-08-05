@@ -18,7 +18,7 @@
 
 @if (isset($filtros))
 <div class="filters-section">
-    <form method="GET" action="{{ request()->url() }}" class="filters-form">
+    <form method="GET" action="" class="filters-form">
         <div class="filters-grid">
             @foreach ($filtros as $filtro)
                 <div class="filter-field">
@@ -42,7 +42,7 @@
                                 placeholder="{{ $filtro['placeholder'] ?? Str::title($filtro['name']) }}"
                                 value="{{ request($filtro['name']) }}">
                             @if (request($filtro['name']))
-                                <button type="button" class="clear-input-btn" onclick="this.previousElementSibling.value=''; this.style.display='none';">
+                                <button type="button" class="clear-input-btn" onclick="this.previousElementSibling.value=''; this.style.display='none'; this.closest('form').submit();">
                                     <i class="fas fa-times"></i>
                                 </button>
                             @endif
@@ -57,7 +57,7 @@
                     <span class="btn-text">Buscar</span>
                 </button>
 
-                <a href="{{ request()->url() }}" class="btn-clear">
+                <a href="/{{ request()->path() }}" class="btn-clear">
                     <i class="fas fa-times"></i>
                     <span class="btn-text">Limpiar</span>
                 </a>

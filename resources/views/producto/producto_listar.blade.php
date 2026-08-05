@@ -8,10 +8,10 @@
         ['name' => 'nombre', 'placeholder' => 'Buscar por nombre'],
         ['name' => 'stock', 'placeholder' => 'Stock'],
         [
-            'name' => 'categoria',
+            'name' => 'categoria_id',
             'placeholder' => 'Filtrar por categoría',
             'type' => 'select',
-            'options' => $categorias->pluck('nombre', 'nombre')->toArray()
+            'options' => $categorias->pluck('nombre', 'id')->toArray()
         ]
     ];
 

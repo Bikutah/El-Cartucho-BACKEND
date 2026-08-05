@@ -17,7 +17,8 @@
 
             @foreach ($segments as $index => $segment)
                 @php
-                    $url = url(implode('/', array_slice($segments, 0, $index + 1)));
+                    $fallbackUrl = url(implode('/', array_slice($segments, 0, $index + 1)));
+                    $url = session("listado_url.{$segment}", $fallbackUrl);
                     $isLast = $loop->last;
                     $name = match ($segment) {
                         'create' => 'Crear',

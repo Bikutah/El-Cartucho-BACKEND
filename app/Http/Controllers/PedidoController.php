@@ -16,6 +16,15 @@ class PedidoController extends Controller
 {
     public function index(Request $request)
     {
+        $request->validate([
+            'id' => 'nullable|integer|min:1',
+            'firebase_uid' => 'nullable|string|max:100',
+            'estado' => 'nullable|string|in:pendiente,pagado,cancelado',
+            'total_min' => 'nullable|numeric|min:0',
+            'total_max' => 'nullable|numeric|min:0|gte:total_min',
+        ]);
+
+        session(['listado_url.pedidos' => url()->full()]);
         $query = Pedido::with(['detalles.producto']);
 
         // Aplicar filtros
@@ -32,11 +41,11 @@ class PedidoController extends Controller
         }
 
         if ($request->filled('total_min')) {
-            $query->where('total', '>=', floatval($request->input('total_min')));
+            $query->where('total', '>=', $request->input('total_min'));
         }
 
         if ($request->filled('total_max')) {
-            $query->where('total', '<=', floatval($request->input('total_max')));
+            $query->where('total', '<=', $request->input('total_max'));
         }
 
         // Paginación

@@ -21,6 +21,12 @@ class CategoriaController extends Controller
 
     public function index(Request $request)
     {
+        $request->validate([
+            'nombre' => 'nullable|string|max:100',
+            'descripcion' => 'nullable|string|max:255',
+        ]);
+
+        session(['listado_url.categorias' => url()->full()]);
         $query = Categoria::query();
 
         // Filtros dinámicos

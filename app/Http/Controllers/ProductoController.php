@@ -21,25 +21,24 @@ class ProductoController extends Controller
         $request->validate([
             'nombre' => 'nullable|string|max:100',
             'stock' => 'nullable|integer|min:0',
-            'categoria' => 'nullable|string|max:100',
+            'categoria_id' => 'nullable|exists:categorias,id',
         ]);
 
-        session(['productos.listado_url' => url()->full()]);
+        session(['listado_url.productos' => url()->full()]);
 
         $query = Producto::with(['categoria', 'imagenes']);
 
         if ($request->filled('nombre')) {
-            $query->where('nombre', 'like', '%' . $request->nombre . '%');
+            $patron = $this->normalizarYGenerarPatron($request->nombre);
+            $query->whereRaw("LOWER(TRANSLATE(nombre, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) LIKE ?", [$patron]);
         }
 
         if ($request->filled('stock')) {
             $query->where('stock', $request->stock);
         }
 
-        if ($request->filled('categoria')) {
-            $query->whereHas('categoria', function ($q) use ($request) {
-                $q->where('nombre', 'like', '%' . $request->categoria . '%');
-            });
+        if ($request->filled('categoria_id')) {
+            $query->where('categoria_id', $request->categoria_id);
         }
 
         $productos = $query->paginate(10)->withQueryString();
@@ -257,6 +256,23 @@ class ProductoController extends Controller
         return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente');
     }
 
+    private function normalizarYGenerarPatron(?string $texto): string
+    {
+        if (empty($texto)) {
+            return '%';
+        }
+
+        $texto = mb_strtolower(trim($texto), 'UTF-8');
+        $remplazos = [
+            'á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ü'=>'u', 'ñ'=>'n',
+            'Á'=>'a', 'É'=>'e', 'Í'=>'i', 'Ó'=>'o', 'Ú'=>'u', 'Ü'=>'u', 'Ñ'=>'n'
+        ];
+        $texto = strtr($texto, $remplazos);
+        $palabras = array_filter(explode(' ', preg_replace('/[^a-z0-9]+/u', ' ', $texto)));
+
+        return '%' . implode('%', $palabras) . '%';
+    }
+
     public function buscar(BuscarProductosRequest $request)
     {
         $validated = $request->validated();
@@ -264,10 +280,10 @@ class ProductoController extends Controller
         $query = Producto::with(['categoria', 'subcategorias', 'imagenes']);
 
         if (!empty($validated['q'])) {
-            $q = $validated['q'];
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nombre', 'like', "%{$q}%")
-                    ->orWhere('descripcion', 'like', "%{$q}%");
+            $patron = $this->normalizarYGenerarPatron($validated['q']);
+            $query->where(function ($sub) use ($patron) {
+                $sub->whereRaw("LOWER(TRANSLATE(nombre, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) LIKE ?", [$patron])
+                    ->orWhereRaw("LOWER(TRANSLATE(descripcion, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) LIKE ?", [$patron]);
             });
         }
 
