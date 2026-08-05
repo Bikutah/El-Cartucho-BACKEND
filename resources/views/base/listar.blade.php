@@ -18,7 +18,7 @@
 
 @if (isset($filtros))
 <div class="filters-section">
-    <form method="GET" action="{{ request()->url() }}" class="filters-form">
+    <form method="GET" action="" class="filters-form">
         <div class="filters-grid">
             @foreach ($filtros as $filtro)
                 <div class="filter-field">
