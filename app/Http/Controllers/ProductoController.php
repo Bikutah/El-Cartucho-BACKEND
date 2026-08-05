@@ -29,7 +29,8 @@ class ProductoController extends Controller
         $query = Producto::with(['categoria', 'imagenes']);
 
         if ($request->filled('nombre')) {
-            $query->where('nombre', 'like', '%' . $request->nombre . '%');
+            $patron = $this->normalizarYGenerarPatron($request->nombre);
+            $query->whereRaw("LOWER(TRANSLATE(nombre, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) LIKE ?", [$patron]);
         }
 
         if ($request->filled('stock')) {
@@ -37,8 +38,9 @@ class ProductoController extends Controller
         }
 
         if ($request->filled('categoria')) {
-            $query->whereHas('categoria', function ($q) use ($request) {
-                $q->where('nombre', 'like', '%' . $request->categoria . '%');
+            $patronCat = $this->normalizarYGenerarPatron($request->categoria);
+            $query->whereHas('categoria', function ($q) use ($patronCat) {
+                $q->whereRaw("LOWER(TRANSLATE(nombre, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) LIKE ?", [$patronCat]);
             });
         }
 
@@ -257,6 +259,23 @@ class ProductoController extends Controller
         return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente');
     }
 
+    private function normalizarYGenerarPatron(?string $texto): string
+    {
+        if (empty($texto)) {
+            return '%';
+        }
+
+        $texto = mb_strtolower(trim($texto), 'UTF-8');
+        $remplazos = [
+            'á'=>'a', 'é'=>'e', 'í'=>'i', 'ó'=>'o', 'ú'=>'u', 'ü'=>'u', 'ñ'=>'n',
+            'Á'=>'a', 'É'=>'e', 'Í'=>'i', 'Ó'=>'o', 'Ú'=>'u', 'Ü'=>'u', 'Ñ'=>'n'
+        ];
+        $texto = strtr($texto, $remplazos);
+        $palabras = array_filter(explode(' ', preg_replace('/[^a-z0-9]+/u', ' ', $texto)));
+
+        return '%' . implode('%', $palabras) . '%';
+    }
+
     public function buscar(BuscarProductosRequest $request)
     {
         $validated = $request->validated();
@@ -264,10 +283,10 @@ class ProductoController extends Controller
         $query = Producto::with(['categoria', 'subcategorias', 'imagenes']);
 
         if (!empty($validated['q'])) {
-            $q = $validated['q'];
-            $query->where(function ($sub) use ($q) {
-                $sub->where('nombre', 'like', "%{$q}%")
-                    ->orWhere('descripcion', 'like', "%{$q}%");
+            $patron = $this->normalizarYGenerarPatron($validated['q']);
+            $query->where(function ($sub) use ($patron) {
+                $sub->whereRaw("LOWER(TRANSLATE(nombre, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) LIKE ?", [$patron])
+                    ->orWhereRaw("LOWER(TRANSLATE(descripcion, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) LIKE ?", [$patron]);
             });
         }
 
