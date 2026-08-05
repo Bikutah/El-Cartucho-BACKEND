@@ -42,7 +42,7 @@
                                 placeholder="{{ $filtro['placeholder'] ?? Str::title($filtro['name']) }}"
                                 value="{{ request($filtro['name']) }}">
                             @if (request($filtro['name']))
-                                <button type="button" class="clear-input-btn" onclick="this.previousElementSibling.value=''; this.style.display='none';">
+                                <button type="button" class="clear-input-btn" onclick="this.previousElementSibling.value=''; this.style.display='none'; this.closest('form').submit();">
                                     <i class="fas fa-times"></i>
                                 </button>
                             @endif
