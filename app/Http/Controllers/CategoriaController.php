@@ -21,6 +21,7 @@ class CategoriaController extends Controller
 
     public function index(Request $request)
     {
+        session(['listado_url.categorias' => url()->full()]);
         $query = Categoria::query();
 
         // Filtros dinámicos

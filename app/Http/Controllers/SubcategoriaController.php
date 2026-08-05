@@ -11,6 +11,7 @@ class SubcategoriaController extends Controller
 {
     public function index(Request $request)
     {
+        session(['listado_url.subcategorias' => url()->full()]);
         $query = Subcategoria::with('categoria');
 
         if ($request->filled('nombre')) {

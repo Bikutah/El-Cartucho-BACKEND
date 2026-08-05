@@ -24,7 +24,7 @@ class ProductoController extends Controller
             'categoria' => 'nullable|string|max:100',
         ]);
 
-        session(['productos.listado_url' => url()->full()]);
+        session(['listado_url.productos' => url()->full()]);
 
         $query = Producto::with(['categoria', 'imagenes']);
 

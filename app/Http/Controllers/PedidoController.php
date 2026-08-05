@@ -16,6 +16,7 @@ class PedidoController extends Controller
 {
     public function index(Request $request)
     {
+        session(['listado_url.pedidos' => url()->full()]);
         $query = Pedido::with(['detalles.producto']);
 
         // Aplicar filtros
