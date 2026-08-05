@@ -21,7 +21,7 @@ class ProductoController extends Controller
         $request->validate([
             'nombre' => 'nullable|string|max:100',
             'stock' => 'nullable|integer|min:0',
-            'categoria' => 'nullable|string|max:100',
+            'categoria_id' => 'nullable|exists:categorias,id',
         ]);
 
         session(['listado_url.productos' => url()->full()]);
@@ -37,11 +37,8 @@ class ProductoController extends Controller
             $query->where('stock', $request->stock);
         }
 
-        if ($request->filled('categoria')) {
-            $patronCat = $this->normalizarYGenerarPatron($request->categoria);
-            $query->whereHas('categoria', function ($q) use ($patronCat) {
-                $q->whereRaw("LOWER(TRANSLATE(nombre, 'áéíóúüñÁÉÍÓÚÜÑ', 'aeiouunAEIOUUN')) LIKE ?", [$patronCat]);
-            });
+        if ($request->filled('categoria_id')) {
+            $query->where('categoria_id', $request->categoria_id);
         }
 
         $productos = $query->paginate(10)->withQueryString();
