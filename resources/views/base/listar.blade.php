@@ -57,7 +57,7 @@
                     <span class="btn-text">Buscar</span>
                 </button>
 
-                <a href="{{ request()->url() }}" class="btn-clear">
+                <a href="/{{ request()->path() }}" class="btn-clear">
                     <i class="fas fa-times"></i>
                     <span class="btn-text">Limpiar</span>
                 </a>
