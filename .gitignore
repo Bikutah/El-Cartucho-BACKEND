@@ -26,3 +26,6 @@ yarn-error.log
 
 .vercel
 .env*
+
+/tests/_output/*
+!/tests/_output/.gitkeep
