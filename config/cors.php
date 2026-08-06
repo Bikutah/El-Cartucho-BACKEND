@@ -8,6 +8,8 @@ return [
 
     'allowed_origins' => [
         'http://localhost:5173', 
+        'http://localhost:5174',
+        'http://localhost:5175',
         'https://elcartucho-git-dev-agustinbowens-projects.vercel.app',
         'https://elcartucho.vercel.app',
     ],
