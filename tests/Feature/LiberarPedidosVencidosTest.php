@@ -1,0 +1,216 @@
+<?php
+
+namespace Tests\Feature;
+
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+use App\Models\Pedido;
+use App\Models\Producto;
+use App\Models\DetallePedido;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Artisan;
+use Carbon\Carbon;
+
+class LiberarPedidosVencidosTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        Config::set('mercadopago.access_token', 'test_access_token');
+        Config::set('mercadopago.legacy_expiration_hours', 96);
+    }
+
+    /** @test */
+    public function command_cancels_expired_pending_order_without_mercado_pago_id()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create([
+            'estado' => 'pendiente',
+            'expira_at' => now()->subMinutes(1)
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        // Ejecutar comando
+        Artisan::call('pedidos:liberar-vencidos');
+
+        $this->assertEquals('cancelado', $pedido->fresh()->estado);
+        $this->assertEquals(12, $producto->fresh()->stock); // 10 + 2
+    }
+
+    /** @test */
+    public function command_does_not_cancel_expired_pending_order_with_valid_pending_payment_in_mercado_pago()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create([
+            'estado' => 'pendiente',
+            'expira_at' => now()->subMinutes(1),
+            'mercado_pago_id' => 'mp_pago_123'
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        // Mock response showing that the payment is still pending and has NOT expired in MercadoPago
+        Http::fake([
+            'api.mercadopago.com/v1/payments/mp_pago_123' => Http::response([
+                'status' => 'pending',
+                'date_of_expiration' => now()->addHours(24)->toIso8601String() // Expiración en el futuro
+            ], 200)
+        ]);
+
+        Artisan::call('pedidos:liberar-vencidos');
+
+        $this->assertEquals('pendiente', $pedido->fresh()->estado); // No debe cancelarse
+        $this->assertEquals(10, $producto->fresh()->stock); // El stock se mantiene
+    }
+
+    /** @test */
+    public function command_cancels_expired_pending_order_with_expired_payment_in_mercado_pago()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create([
+            'estado' => 'pendiente',
+            'expira_at' => now()->subMinutes(1),
+            'mercado_pago_id' => 'mp_pago_expired'
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 3,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        // Mock response showing payment expired in MercadoPago
+        Http::fake([
+            'api.mercadopago.com/v1/payments/mp_pago_expired' => Http::response([
+                'status' => 'pending',
+                'date_of_expiration' => now()->subMinutes(10)->toIso8601String() // Vencido
+            ], 200)
+        ]);
+
+        Artisan::call('pedidos:liberar-vencidos');
+
+        $this->assertEquals('cancelado', $pedido->fresh()->estado); // Se cancela
+        $this->assertEquals(13, $producto->fresh()->stock); // Devuelve stock
+    }
+
+    /** @test */
+    public function command_cancels_legacy_pending_order_older_than_96_hours()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create([
+            'estado' => 'pendiente',
+            'expira_at' => null, // Legacy
+            'created_at' => now()->subHours(97)
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        Artisan::call('pedidos:liberar-vencidos');
+
+        $this->assertEquals('cancelado', $pedido->fresh()->estado);
+        $this->assertEquals(14, $producto->fresh()->stock); // 10 + 4
+    }
+
+    /** @test */
+    public function command_does_not_cancel_legacy_pending_order_under_96_hours()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create([
+            'estado' => 'pendiente',
+            'expira_at' => null, // Legacy
+            'created_at' => now()->subHours(50) // Menos de 96 horas
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        Artisan::call('pedidos:liberar-vencidos');
+
+        $this->assertEquals('pendiente', $pedido->fresh()->estado); // No se cancela
+        $this->assertEquals(10, $producto->fresh()->stock);
+    }
+
+    /** @test */
+    public function command_run_twice_does_not_restore_stock_twice()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create([
+            'estado' => 'pendiente',
+            'expira_at' => now()->subMinutes(1)
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        // Primera corrida
+        Artisan::call('pedidos:liberar-vencidos');
+        $this->assertEquals('cancelado', $pedido->fresh()->estado);
+        $this->assertEquals(12, $producto->fresh()->stock);
+
+        // Segunda corrida
+        Artisan::call('pedidos:liberar-vencidos');
+        $this->assertEquals(12, $producto->fresh()->stock); // Sigue igual
+    }
+
+    /** @test */
+    public function command_does_not_touch_paid_or_cancelled_orders()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        
+        $pedidoPagado = Pedido::factory()->create([
+            'estado' => 'pagado',
+            'expira_at' => now()->subHours(10)
+        ]);
+        DetallePedido::create([
+            'pedido_id' => $pedidoPagado->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $pedidoCancelado = Pedido::factory()->create([
+            'estado' => 'cancelado',
+            'expira_at' => now()->subHours(10)
+        ]);
+        DetallePedido::create([
+            'pedido_id' => $pedidoCancelado->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        Artisan::call('pedidos:liberar-vencidos');
+
+        $this->assertEquals('pagado', $pedidoPagado->fresh()->estado);
+        $this->assertEquals('cancelado', $pedidoCancelado->fresh()->estado);
+        $this->assertEquals(10, $producto->fresh()->stock); // No se alteró stock
+    }
+}

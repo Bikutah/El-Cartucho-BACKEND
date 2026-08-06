@@ -282,10 +282,14 @@ class PedidoController extends Controller
             $total = 0;
             $detalles = [];
 
+            // Calcular expiración a partir de config/mercadopago.php
+            $expiracion = now()->addHours(config('mercadopago.expiration_hours', 72));
+
             $pedido = Pedido::create([
                 'firebase_uid' => $firebaseUid,
                 'estado' => 'pendiente',
                 'total' => 0,
+                'expira_at' => $expiracion,
             ]);
 
             foreach ($request->productos as $item) {
@@ -311,23 +315,71 @@ class PedidoController extends Controller
 
             $pedido->update(['total' => $total]);
 
-            $preference = $this->crearPreferenciaMercadoPago($pedido, $detalles);
-
             DB::commit();
-
-            return response()->json([
-                'pedido_id' => $pedido->id,
-                'mercado_pago_url' => $preference['init_point'],
-                'mercado_pago_id' => $preference['id']
-            ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
 
             return response()->json([
                 'error' => 'No se pudo crear el pedido',
                 'message' => $e->getMessage()
-            ], $e->getCode() ?: 500);
+            ], $e->getCode() === 409 ? 409 : 500);
         }
+
+        // Llamada HTTP externa FUERA de la transacción principal
+        try {
+            $detallesCargados = DetallePedido::with('producto')->where('pedido_id', $pedido->id)->get();
+            $preference = $this->crearPreferenciaMercadoPago($pedido, $detallesCargados);
+        } catch (\Exception $e) {
+            // Si la preferencia falla, cancelamos el pedido y reponemos stock en una transacción aparte
+            DB::beginTransaction();
+            try {
+                $pedidoACancelar = Pedido::where('id', $pedido->id)->lockForUpdate()->first();
+                if ($pedidoACancelar && $pedidoACancelar->estado === 'pendiente') {
+                    $pedidoACancelar->estado = 'cancelado';
+                    $pedidoACancelar->save();
+
+                    $detallesAReponer = DetallePedido::where('pedido_id', $pedido->id)->get();
+                    foreach ($detallesAReponer as $detalle) {
+                        $prod = Producto::where('id', $detalle->producto_id)->lockForUpdate()->first();
+                        if ($prod) {
+                            $prod->stock += $detalle->cantidad;
+                            $prod->save();
+                        }
+                    }
+                }
+                DB::commit();
+            } catch (\Exception $rollbackException) {
+                DB::rollBack();
+
+                $detallesSinReponer = [];
+                try {
+                    $detallesAReponer = DetallePedido::where('pedido_id', $pedido->id)->get();
+                    foreach ($detallesAReponer as $detalle) {
+                        $detallesSinReponer[] = "producto_id: {$detalle->producto_id}, cantidad: {$detalle->cantidad}";
+                    }
+                } catch (\Exception $detailsEx) {
+                    $detallesSinReponer[] = "No se pudieron consultar los detalles del pedido";
+                }
+
+                Log::critical("FALLO CRÍTICO: No se pudo revertir el stock para el pedido fallido ID: {$pedido->id}", [
+                    'pedido_id' => $pedido->id,
+                    'detalles_sin_reponer' => $detallesSinReponer,
+                    'error_rollback' => $rollbackException->getMessage(),
+                    'error_original' => $e->getMessage()
+                ]);
+            }
+
+            return response()->json([
+                'error' => 'No se pudo crear la preferencia de pago',
+                'message' => $e->getMessage()
+            ], 500);
+        }
+
+        return response()->json([
+            'pedido_id' => $pedido->id,
+            'mercado_pago_url' => $preference['init_point'],
+            'mercado_pago_id' => $preference['id']
+        ], 201);
     }
 
     private function crearPreferenciaMercadoPago(Pedido $pedido, $detalles)
@@ -343,18 +395,20 @@ class PedidoController extends Controller
             ];
         }
 
-        $response = Http::withToken(env('MERCADO_PAGO_ACCESS_TOKEN'))
+        $response = Http::withToken(config('mercadopago.access_token'))
             ->post('https://api.mercadopago.com/checkout/preferences', [
                 'items' => $items,
-                'external_reference' => $pedido->id,
+                'external_reference' => (string)$pedido->id,
                 'back_urls' => [
-                    'success' => env('FRONT_URL') . '/pago/success',
-                    'failure' => env('FRONT_URL') . '/pago/failure',
-                    'pending' => env('FRONT_URL') . '/pago/pending',
+                    'success' => config('mercadopago.front_url') . '/pago/success',
+                    'failure' => config('mercadopago.front_url') . '/pago/failure',
+                    'pending' => config('mercadopago.front_url') . '/pago/pending',
                 ],
-                'notification_url' => 'https://el-cartucho.vercel.app/ed/webhook/mercadopago',
+                'notification_url' => config('mercadopago.notification_url'),
                 'auto_return' => 'approved',
-                'statement_descriptor' => 'ELCARTUCHO'
+                'statement_descriptor' => 'ELCARTUCHO',
+                'expires' => true,
+                'expiration_date_to' => $pedido->expira_at->toIso8601String(),
             ]);
 
         if (!$response->successful()) {
