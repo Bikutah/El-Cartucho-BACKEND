@@ -50,7 +50,7 @@
             'name' => 'imagenes',
             'label' => 'Imágenes del producto',
             'type' => 'file',
-            'required' => true,
+            'required' => false,
             'multiple' => true,
             'accept' => 'image/*',
         ],
@@ -60,7 +60,7 @@
             'placeholder' => 'Seleccione una categoría',
             'type' => 'select',
             'options' => $categorias->pluck('nombre', 'id'),
-            'required' => true,
+            'required' => false,
             'attributes' => ['id' => 'categoria_id'],
         ],
     ];

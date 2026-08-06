@@ -12,21 +12,21 @@ use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
 use App\Http\Requests\BuscarProductosRequest;
 
-
 class ProductoController extends Controller
 {
-
     public function index(Request $request)
     {
         $request->validate([
             'nombre' => 'nullable|string|max:100',
             'stock' => 'nullable|integer|min:0',
             'categoria_id' => 'nullable|exists:categorias,id',
+            'categorias' => 'nullable|array',
+            'categorias.*' => 'exists:categorias,id',
         ]);
 
         session(['listado_url.productos' => url()->full()]);
 
-        $query = Producto::with(['categoria', 'imagenes']);
+        $query = Producto::with(['categorias', 'subcategorias', 'imagenes']);
 
         if ($request->filled('nombre')) {
             $patron = $this->normalizarYGenerarPatron($request->nombre);
@@ -37,8 +37,12 @@ class ProductoController extends Controller
             $query->where('stock', $request->stock);
         }
 
-        if ($request->filled('categoria_id')) {
-            $query->where('categoria_id', $request->categoria_id);
+        $catIds = (array) ($request->categorias ?? ($request->filled('categoria_id') ? [$request->categoria_id] : []));
+        $catIds = array_values(array_unique(array_filter($catIds)));
+        if (!empty($catIds)) {
+            $query->whereHas('categorias', function ($q) use ($catIds) {
+                $q->whereIn('categorias.id', $catIds);
+            });
         }
 
         $productos = $query->paginate(10)->withQueryString();
@@ -52,12 +56,13 @@ class ProductoController extends Controller
                     ['label' => 'Descripción', 'class' => 'd-none d-md-block'],
                     ['label' => 'Precio', 'class' => 'd-none d-md-block'],
                     ['label' => 'Stock'],
-                    ['label' => 'Categoría'],
+                    ['label' => 'Categorías'],
                     ['label' => 'Imágenes']
                 ],
                 'rutaEditar' => 'productos.edit',
                 'rutaEliminar' => 'productos.destroy',
                 'renderFila' => function ($producto) {
+                    $nombresCat = $producto->categorias->pluck('nombre')->join(', ');
                     return '
                     <div class="table-cell">' . e($producto->id) . '</div>
                     <div class="table-cell nombre">
@@ -80,7 +85,7 @@ class ProductoController extends Controller
                     </div>
                     <div class="table-cell">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
                     <div class="table-cell">' . e($producto->stock) . '</div>
-                    <div class="table-cell">' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</div>
+                    <div class="table-cell">' . e($nombresCat ?: 'Sin categoría') . '</div>
                     <div class="table-cell">
                         <a href="' . route('productos.imagenes', $producto) . '" class="action-btn"
                         data-bs-toggle="tooltip" data-bs-placement="top" title="Ver imágenes">
@@ -92,11 +97,9 @@ class ProductoController extends Controller
             ])->render();
         }
 
-
         $categorias = Categoria::orderBy('nombre')->get();
         return view('producto.producto_listar', compact('productos', 'categorias'));
     }
-
 
     public function create()
     {
@@ -111,106 +114,9 @@ class ProductoController extends Controller
             'descripcion' => 'required|string|max:500',
             'precioUnitario' => 'required|numeric',
             'stock' => 'required|integer',
-            'categoria_id' => 'required|exists:categorias,id',
-            'subcategorias' => 'nullable|array|min:0',
-            'subcategorias.*' => 'nullable|exists:subcategorias,id',
-            'imagenes' => 'required|array|min:1|max:5',
-            'imagenes.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-        ], [
-            'nombre.required' => 'El nombre es obligatorio.',
-            'nombre.string' => 'El nombre debe ser un texto válido.',
-            'nombre.max' => 'El nombre no puede exceder los 255 caracteres.',
-            'descripcion.required' => 'La descripción es obligatoria.',
-            'descripcion.string' => 'La descripción debe ser un texto válido.',
-            'descripcion.max' => 'La descripción no puede exceder los 500 caracteres.',
-            'precioUnitario.required' => 'El precio unitario es obligatorio.',
-            'precioUnitario.numeric' => 'El precio unitario debe ser un número válido.',
-            'stock.required' => 'El stock es obligatorio.',
-            'stock.integer' => 'El stock debe ser un número entero.',
-            'categoria_id.required' => 'La categoría es obligatoria.',
-            'categoria_id.exists' => 'La categoría seleccionada no es válida.',
-            'subcategorias.array' => 'Las subcategorías deben ser un array válido.',
-            'subcategorias.*.exists' => 'Una o más subcategorías seleccionadas no son válidas.',
-            'imagenes.required' => 'Debe subir al menos una imagen.',
-            'imagenes.array' => 'Las imágenes deben ser proporcionadas en formato correcto.',
-            'imagenes.min' => 'Debe subir al menos una imagen.',
-            'imagenes.max' => 'No puede subir más de 5 imágenes.',
-            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida.',
-            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpeg, png, jpg, gif o webp.',
-            'imagenes.*.max' => 'Cada imagen no puede exceder los 2MB.',
-        ]);
-
-        $data = $request->except(['imagenes', 'subcategorias']);
-        $producto = Producto::create($data);
-
-        // Asociar subcategorías solo si existen y no están vacías
-        if ($request->has('subcategorias') && !empty(array_filter($request->subcategorias))) {
-            $producto->subcategorias()->sync(array_filter($request->subcategorias));
-        }
-
-        // ... resto del código para subir imágenes (sin cambios)
-        $slugNombre = Str::slug($producto->nombre);
-        $timestamp = time();
-
-        foreach ($request->file('imagenes') as $index => $uploadedFile) {
-            $cloudName = config('cloudinary.cloud.cloud_name');
-            $apiKey = config('cloudinary.cloud.api_key');
-            $apiSecret = config('cloudinary.cloud.api_secret');
-            $folder = 'productos';
-            $publicId = "{$slugNombre}_{$producto->id}_{$index}_{$timestamp}";
-
-            $params_to_sign = "folder={$folder}&public_id={$publicId}&timestamp={$timestamp}{$apiSecret}";
-            $signature = hash('sha256', $params_to_sign);
-
-            $response = Http::asMultipart()->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
-                [
-                    'name' => 'file',
-                    'contents' => fopen($uploadedFile->getRealPath(), 'r'),
-                    'filename' => $uploadedFile->getClientOriginalName(),
-                ],
-                ['name' => 'api_key', 'contents' => $apiKey],
-                ['name' => 'timestamp', 'contents' => $timestamp],
-                ['name' => 'folder', 'contents' => $folder],
-                ['name' => 'public_id', 'contents' => $publicId],
-                ['name' => 'signature', 'contents' => $signature],
-            ]);
-
-            if (!$response->successful()) {
-                return back()->withErrors(['imagenes' => 'Error al subir una de las imágenes.']);
-            }
-
-            $result = $response->json();
-
-            $producto->imagenes()->create([
-                'imagen_url' => $result['secure_url'],
-                'imagen_public_id' => $result['public_id'],
-            ]);
-        }
-
-        return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
-    }
-
-
-    public function show($id)
-    {
-        return view('productos.show', compact('id'));
-    }
-
-    public function edit(Producto $producto)
-    {
-        $categorias = Categoria::with('subcategorias')->get();
-        $producto->load('subcategorias');
-        return view('producto.producto_editar', compact('producto', 'categorias'));
-    }
-
-    public function update(Request $request, $id)
-    {
-        $request->validate([
-            'nombre' => 'required|string|max:255',
-            'descripcion' => 'required|string|max:500',
-            'precioUnitario' => 'required|numeric',
-            'stock' => 'required|integer',
-            'categoria_id' => 'required|exists:categorias,id',
+            'categoria_id' => 'nullable|exists:categorias,id',
+            'categorias' => 'nullable|array|min:0',
+            'categorias.*' => 'nullable|exists:categorias,id',
             'subcategorias' => 'nullable|array|min:0',
             'subcategorias.*' => 'nullable|exists:subcategorias,id',
             'imagenes' => 'nullable|array|max:5',
@@ -226,8 +132,119 @@ class ProductoController extends Controller
             'precioUnitario.numeric' => 'El precio unitario debe ser un número válido.',
             'stock.required' => 'El stock es obligatorio.',
             'stock.integer' => 'El stock debe ser un número entero.',
-            'categoria_id.required' => 'La categoría es obligatoria.',
             'categoria_id.exists' => 'La categoría seleccionada no es válida.',
+            'categorias.array' => 'Las categorías deben ser un array válido.',
+            'categorias.*.exists' => 'Una o más categorías seleccionadas no son válidas.',
+            'subcategorias.array' => 'Las subcategorías deben ser un array válido.',
+            'subcategorias.*.exists' => 'Una o más subcategorías seleccionadas no son válidas.',
+            'imagenes.array' => 'Las imágenes deben ser proporcionadas en formato correcto.',
+            'imagenes.max' => 'No puede subir más de 5 imágenes.',
+            'imagenes.*.image' => 'Cada archivo debe ser una imagen válida.',
+            'imagenes.*.mimes' => 'Las imágenes deben ser de tipo: jpeg, png, jpg, gif o webp.',
+            'imagenes.*.max' => 'Cada imagen no puede exceder los 2MB.',
+        ]);
+
+        $data = $request->except(['imagenes', 'subcategorias', 'categorias']);
+        
+        // Obtener IDs de categorías seleccionadas
+        $catIds = array_filter((array) ($request->categorias ?? ($request->filled('categoria_id') ? [$request->categoria_id] : [])));
+        $catIds = array_values(array_unique($catIds));
+
+        $data['categoria_id'] = reset($catIds) ?: null;
+
+        $producto = Producto::create($data);
+
+        // Sincronizar categorías
+        $producto->categorias()->sync($catIds);
+
+        // Asociar subcategorías solo si existen y no están vacías
+        if ($request->has('subcategorias') && !empty(array_filter($request->subcategorias))) {
+            $producto->subcategorias()->sync(array_filter($request->subcategorias));
+        }
+
+        if ($request->hasFile('imagenes')) {
+            $slugNombre = Str::slug($producto->nombre);
+            $timestamp = time();
+
+            foreach ($request->file('imagenes') as $index => $uploadedFile) {
+                $cloudName = config('cloudinary.cloud.cloud_name');
+                $apiKey = config('cloudinary.cloud.api_key');
+                $apiSecret = config('cloudinary.cloud.api_secret');
+                $folder = 'productos';
+                $publicId = "{$slugNombre}_{$producto->id}_{$index}_{$timestamp}";
+
+                $params_to_sign = "folder={$folder}&public_id={$publicId}&timestamp={$timestamp}{$apiSecret}";
+                $signature = hash('sha256', $params_to_sign);
+
+                $response = Http::asMultipart()->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/upload", [
+                    [
+                        'name' => 'file',
+                        'contents' => fopen($uploadedFile->getRealPath(), 'r'),
+                        'filename' => $uploadedFile->getClientOriginalName(),
+                    ],
+                    ['name' => 'api_key', 'contents' => $apiKey],
+                    ['name' => 'timestamp', 'contents' => $timestamp],
+                    ['name' => 'folder', 'contents' => $folder],
+                    ['name' => 'public_id', 'contents' => $publicId],
+                    ['name' => 'signature', 'contents' => $signature],
+                ]);
+
+                if (!$response->successful()) {
+                    return back()->withErrors(['imagenes' => 'Error al subir una de las imágenes.']);
+                }
+
+                $result = $response->json();
+
+                $producto->imagenes()->create([
+                    'imagen_url' => $result['secure_url'],
+                    'imagen_public_id' => $result['public_id'],
+                ]);
+            }
+        }
+
+        return redirect()->route('productos.index')->with('success', 'Producto creado correctamente');
+    }
+
+    public function show($id)
+    {
+        return view('productos.show', compact('id'));
+    }
+
+    public function edit(Producto $producto)
+    {
+        $categorias = Categoria::with('subcategorias')->get();
+        $producto->load(['categorias', 'subcategorias', 'imagenes']);
+        return view('producto.producto_editar', compact('producto', 'categorias'));
+    }
+
+    public function update(Request $request, $id)
+    {
+        $request->validate([
+            'nombre' => 'required|string|max:255',
+            'descripcion' => 'required|string|max:500',
+            'precioUnitario' => 'required|numeric',
+            'stock' => 'required|integer',
+            'categoria_id' => 'nullable|exists:categorias,id',
+            'categorias' => 'nullable|array|min:0',
+            'categorias.*' => 'nullable|exists:categorias,id',
+            'subcategorias' => 'nullable|array|min:0',
+            'subcategorias.*' => 'nullable|exists:subcategorias,id',
+            'imagenes' => 'nullable|array|max:5',
+            'imagenes.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
+        ], [
+            'nombre.required' => 'El nombre es obligatorio.',
+            'nombre.string' => 'El nombre debe ser un texto válido.',
+            'nombre.max' => 'El nombre no puede exceder los 255 caracteres.',
+            'descripcion.required' => 'La descripción es obligatoria.',
+            'descripcion.string' => 'La descripción debe ser un texto válido.',
+            'descripcion.max' => 'La descripción no puede exceder los 500 caracteres.',
+            'precioUnitario.required' => 'El precio unitario es obligatorio.',
+            'precioUnitario.numeric' => 'El precio unitario debe ser un número válido.',
+            'stock.required' => 'El stock es obligatorio.',
+            'stock.integer' => 'El stock debe ser un número entero.',
+            'categoria_id.exists' => 'La categoría seleccionada no es válida.',
+            'categorias.array' => 'Las categorías deben ser un array válido.',
+            'categorias.*.exists' => 'Una o más categorías seleccionadas no son válidas.',
             'subcategorias.array' => 'Las subcategorías deben ser un array válido.',
             'subcategorias.*.exists' => 'Una o más subcategorías seleccionadas no son válidas.',
             'imagenes.array' => 'Las imágenes deben ser proporcionadas en formato correcto.',
@@ -238,7 +255,15 @@ class ProductoController extends Controller
         ]);
 
         $producto = Producto::findOrFail($id);
-        $producto->update($request->except('subcategorias', 'imagenes'));
+
+        $catIds = array_filter((array) ($request->categorias ?? ($request->filled('categoria_id') ? [$request->categoria_id] : [])));
+        $catIds = array_values(array_unique($catIds));
+
+        $updateData = $request->except(['subcategorias', 'categorias', 'imagenes']);
+        $updateData['categoria_id'] = reset($catIds) ?: null;
+
+        $producto->update($updateData);
+        $producto->categorias()->sync($catIds);
 
         // Sincronizar subcategorías (permite array vacío)
         if ($request->has('subcategorias')) {
@@ -246,11 +271,6 @@ class ProductoController extends Controller
             $producto->subcategorias()->sync($subcategorias);
         } else {
             $producto->subcategorias()->sync([]);
-        }
-
-        // Manejar imágenes si se suben nuevas
-        if ($request->hasFile('imagenes')) {
-            // Aquí podrías agregar lógica para manejar nuevas imágenes si es necesario
         }
 
         return redirect()->route('productos.index')->with('success', 'Producto actualizado correctamente');
@@ -277,7 +297,7 @@ class ProductoController extends Controller
     {
         $validated = $request->validated();
 
-        $query = Producto::with(['categoria', 'subcategorias', 'imagenes']);
+        $query = Producto::with(['categorias', 'subcategorias', 'imagenes']);
 
         if (!empty($validated['q'])) {
             $patron = $this->normalizarYGenerarPatron($validated['q']);
@@ -287,8 +307,16 @@ class ProductoController extends Controller
             });
         }
 
+        $catIds = $validated['categorias'] ?? [];
         if (!empty($validated['categoria_id'])) {
-            $query->where('categoria_id', $validated['categoria_id']);
+            $catIds[] = (int) $validated['categoria_id'];
+        }
+        $catIds = array_values(array_unique(array_filter($catIds)));
+
+        if (!empty($catIds)) {
+            $query->whereHas('categorias', function ($q) use ($catIds) {
+                $q->whereIn('categorias.id', $catIds);
+            });
         }
 
         if (!empty($validated['subcategorias'])) {
@@ -326,7 +354,7 @@ class ProductoController extends Controller
 
     public function obtenerProductosRecientes()
     {
-        $productos = Producto::with(['categoria', 'imagenes'])
+        $productos = Producto::with(['categorias', 'subcategorias', 'imagenes'])
             ->orderBy('created_at', 'desc')
             ->take(6)
             ->get();
@@ -336,7 +364,7 @@ class ProductoController extends Controller
 
     public function obtenerProductosMasVendidos()
     {
-        $productos = Producto::with(['categoria', 'imagenes'])
+        $productos = Producto::with(['categorias', 'subcategorias', 'imagenes'])
             ->select('productos.*', DB::raw('SUM(detalle_pedido.cantidad) as total_vendido'))
             ->join('detalle_pedido', 'productos.id', '=', 'detalle_pedido.producto_id')
             ->groupBy('productos.id')
@@ -350,7 +378,7 @@ class ProductoController extends Controller
     public function obtenerProductoConResource($id)
     {
         try {
-            $producto = Producto::with(['categoria', 'subcategorias', 'imagenes'])
+            $producto = Producto::with(['categorias', 'subcategorias', 'imagenes'])
                 ->findOrFail($id);
 
             return response()->json(
@@ -373,40 +401,45 @@ class ProductoController extends Controller
 
     public function destroy(Producto $producto)
     {
-        // Eliminar imágenes de Cloudinary
-        foreach ($producto->imagenes as $imagen) {
-            $cloudName = config('cloudinary.cloud.cloud_name');
-            $apiKey = config('cloudinary.cloud.api_key');
-            $apiSecret = config('cloudinary.cloud.api_secret');
+        try {
+            foreach ($producto->imagenes as $imagen) {
+                if (empty($imagen->imagen_public_id)) {
+                    continue;
+                }
+                $cloudName = config('cloudinary.cloud.cloud_name');
+                $apiKey = config('cloudinary.cloud.api_key');
+                $apiSecret = config('cloudinary.cloud.api_secret');
 
-            $timestamp = time();
-            $publicId = $imagen->imagen_public_id;
+                if (!$cloudName || !$apiKey || !$apiSecret) {
+                    continue;
+                }
 
-            $params_to_sign = "public_id={$publicId}&timestamp={$timestamp}{$apiSecret}";
-            $signature = hash('sha256', $params_to_sign);
+                $timestamp = time();
+                $publicId = $imagen->imagen_public_id;
 
-            $response = Http::asForm()->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/destroy", [
-                'api_key'    => $apiKey,
-                'timestamp'  => $timestamp,
-                'public_id'  => $publicId,
-                'signature'  => $signature,
-            ]);
+                $params_to_sign = "public_id={$publicId}&timestamp={$timestamp}{$apiSecret}";
+                $signature = hash('sha256', $params_to_sign);
 
-            // Podés validar $response si querés agregar control de errores
+                Http::asForm()->post("https://api.cloudinary.com/v1_1/{$cloudName}/image/destroy", [
+                    'api_key'    => $apiKey,
+                    'timestamp'  => $timestamp,
+                    'public_id'  => $publicId,
+                    'signature'  => $signature,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // Ignorar errores de Cloudinary en testing o datos demo
         }
 
-        // Eliminar imágenes en base de datos
+        $producto->categorias()->detach();
+        $producto->subcategorias()->detach();
         $producto->imagenes()->delete();
-
-        // Eliminar el producto
         $producto->delete();
 
-        // Si es una petición AJAX, devolvé JSON
         if (request()->ajax()) {
             return response()->json(['success' => true, 'message' => 'Producto eliminado correctamente.']);
         }
 
-        // Si no, redireccioná como siempre
         return redirect()->route('productos.index')->with('success', 'Producto eliminado correctamente.');
     }
 }

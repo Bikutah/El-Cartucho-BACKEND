@@ -58,7 +58,7 @@
             'placeholder' => 'Seleccione una categoría',
             'type' => 'select',
             'options' => $categorias->pluck('nombre', 'id'),
-            'required' => true,
+            'required' => false,
             'value' => $producto->categoria_id,
             'attributes' => ['id' => 'categoria_id'],
         ],

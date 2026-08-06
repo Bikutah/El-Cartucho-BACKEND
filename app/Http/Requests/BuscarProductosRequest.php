@@ -24,7 +24,10 @@ class BuscarProductosRequest extends FormRequest
     {
         return [
             'q' => 'nullable|string|max:100',
+            // # DEPRECADO: eliminar en Pasada C
             'categoria_id' => 'nullable|integer|exists:categorias,id',
+            'categorias' => 'nullable|array',
+            'categorias.*' => 'integer|exists:categorias,id',
             'subcategorias' => 'nullable|array',
             'subcategorias.*' => 'integer|exists:subcategorias,id',
             'precio_min' => 'nullable|numeric|min:0',
@@ -48,6 +51,9 @@ class BuscarProductosRequest extends FormRequest
             'q.max' => 'El término de búsqueda no puede exceder los 100 caracteres.',
             'categoria_id.integer' => 'La categoría debe ser un número entero.',
             'categoria_id.exists' => 'La categoría seleccionada no es válida.',
+            'categorias.array' => 'Las categorías deben ser proporcionadas en formato correcto.',
+            'categorias.*.integer' => 'El ID de la categoría debe ser un número entero.',
+            'categorias.*.exists' => 'Una o más categorías seleccionadas no son válidas.',
             'subcategorias.array' => 'Las subcategorías deben ser proporcionadas en formato correcto.',
             'subcategorias.*.integer' => 'El ID de la subcategoría debe ser un número entero.',
             'subcategorias.*.exists' => 'Una o más subcategorías seleccionadas no son válidas.',

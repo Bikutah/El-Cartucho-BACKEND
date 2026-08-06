@@ -159,6 +159,18 @@ class CategoriaController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $categoria = Categoria::findOrFail($id);
+        $categoria->productos()->detach();
+        foreach ($categoria->subcategorias as $subcategoria) {
+            $subcategoria->productos()->detach();
+            $subcategoria->delete();
+        }
+        $categoria->delete();
+
+        if (request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Categoría eliminada correctamente.']);
+        }
+
+        return redirect()->route('categorias.index')->with('success', 'Categoría eliminada correctamente.');
     }
 }

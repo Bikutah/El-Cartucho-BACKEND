@@ -19,8 +19,15 @@ class ProductoResource extends JsonResource
             'nombre' => $this->nombre,
             'precio' => $this->precioUnitario,
             'imagen' => $this->primera_imagen?->imagen_url ?? null,
-            'categoria' => $this->categoria?->nombre ?? null,
-            'subcategorias' => $this->subcategorias->pluck('nombre'), // o el array completo si querés más info
+            // # DEPRECADO: eliminar en Pasada C
+            'categoria' => $this->categorias->first()?->nombre ?? $this->categoria?->nombre ?? null,
+            'categorias' => $this->categorias->map(function ($cat) {
+                return [
+                    'id' => $cat->id,
+                    'nombre' => $cat->nombre,
+                ];
+            })->values()->toArray(),
+            'subcategorias' => $this->subcategorias->pluck('nombre'),
         ];
     }
 

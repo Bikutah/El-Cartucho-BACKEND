@@ -14,7 +14,7 @@ class PivotCategoriasTest extends TestCase
 
     public function test_un_producto_puede_asociarse_a_varias_categorias()
     {
-        $producto = Producto::factory()->create();
+        $producto = Producto::factory()->create(['categoria_id' => null]);
         $cat1 = Categoria::factory()->create();
         $cat2 = Categoria::factory()->create();
 
@@ -27,7 +27,7 @@ class PivotCategoriasTest extends TestCase
 
     public function test_no_se_puede_duplicar_el_mismo_par_producto_categoria()
     {
-        $producto = Producto::factory()->create();
+        $producto = Producto::factory()->create(['categoria_id' => null]);
         $categoria = Categoria::factory()->create();
 
         $producto->categorias()->attach($categoria->id);
@@ -38,7 +38,7 @@ class PivotCategoriasTest extends TestCase
 
     public function test_borrar_un_producto_elimina_sus_filas_del_pivot()
     {
-        $producto = Producto::factory()->create();
+        $producto = Producto::factory()->create(['categoria_id' => null]);
         $categoria = Categoria::factory()->create();
 
         $producto->categorias()->attach($categoria->id);
@@ -58,7 +58,7 @@ class PivotCategoriasTest extends TestCase
 
     public function test_borrar_una_categoria_elimina_sus_filas_del_pivot_pero_no_borra_los_productos()
     {
-        $producto = Producto::factory()->create();
+        $producto = Producto::factory()->create(['categoria_id' => null]);
         $categoria = Categoria::factory()->create();
 
         $producto->categorias()->attach($categoria->id);
@@ -81,7 +81,7 @@ class PivotCategoriasTest extends TestCase
 
     public function test_la_relacion_categorias_devuelve_lo_esperado()
     {
-        $producto = Producto::factory()->create();
+        $producto = Producto::factory()->create(['categoria_id' => null]);
         $categoria = Categoria::factory()->create(['nombre' => 'Juegos de Mesa']);
 
         $producto->categorias()->attach($categoria->id);

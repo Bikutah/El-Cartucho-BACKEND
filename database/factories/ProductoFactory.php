@@ -25,6 +25,15 @@ class ProductoFactory extends Factory
         ];
     }
 
+    public function configure(): static
+    {
+        return $this->afterCreating(function (\App\Models\Producto $producto) {
+            if ($producto->categoria_id && !$producto->categorias()->where('categorias.id', $producto->categoria_id)->exists()) {
+                $producto->categorias()->attach($producto->categoria_id);
+            }
+        });
+    }
+
     public function conImagenes(int $count = 3): static
     {
         return $this->has(\App\Models\Imagen::factory()->count($count), 'imagenes');

@@ -38,6 +38,14 @@ class Producto extends Model
     }
     public function getPrimeraImagenAttribute()
     {
-        return $this->imagenes->first();
+        $first = $this->imagenes->first();
+        if ($first) {
+            return $first;
+        }
+        $stockUrl = config('app.stock_image_url', '/placeholder.svg');
+        return (object) [
+            'imagen_url' => $stockUrl,
+            'imagen_public_id' => null,
+        ];
     }
 }

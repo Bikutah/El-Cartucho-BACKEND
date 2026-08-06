@@ -19,7 +19,14 @@ class ProductoDetalleResource extends JsonResource
             'nombre' => $this->nombre,
             'precio' => $this->precioUnitario,
             'imagenes' => $this->imagenes->pluck('imagen_url'),
-            'categoria' => $this->categoria?->nombre ?? null,
+            // # DEPRECADO: eliminar en Pasada C
+            'categoria' => $this->categorias->first()?->nombre ?? $this->categoria?->nombre ?? null,
+            'categorias' => $this->categorias->map(function ($cat) {
+                return [
+                    'id' => $cat->id,
+                    'nombre' => $cat->nombre,
+                ];
+            })->values()->toArray(),
             'subcategorias' => $this->subcategorias->pluck('nombre'),
             'descripcion' => $this->descripcion,
             'stock' => $this->stock
