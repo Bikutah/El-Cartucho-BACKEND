@@ -223,4 +223,123 @@ class WebhookTest extends TestCase
         // El stock debe seguir en 10 (no se altera ni decrementa doble)
         $this->assertEquals(10, $producto->fresh()->stock);
     }
+
+    /** @test */
+    public function webhook_pending_does_not_revert_cancelled_order()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create(['estado' => 'cancelado']);
+        
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 3,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $paymentId = '444555666';
+        $requestId = 'req_id_4';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentId, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId}" => Http::response([
+                'status' => 'pending',
+                'external_reference' => $pedido->id
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data.id=' . $paymentId, [
+            'type' => 'payment',
+            'data' => ['id' => $paymentId]
+        ], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        // Debe seguir cancelado
+        $this->assertEquals('cancelado', $pedido->fresh()->estado);
+        // Stock no debe reponerse doble ni modificarse
+        $this->assertEquals(10, $producto->fresh()->stock);
+    }
+
+    /** @test */
+    public function webhook_pending_does_not_revert_paid_order()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create(['estado' => 'pagado']);
+        
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $paymentId = '777888999';
+        $requestId = 'req_id_5';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentId, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId}" => Http::response([
+                'status' => 'pending',
+                'external_reference' => $pedido->id
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data.id=' . $paymentId, [
+            'type' => 'payment',
+            'data' => ['id' => $paymentId]
+        ], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        // Debe seguir pagado
+        $this->assertEquals('pagado', $pedido->fresh()->estado);
+        $this->assertEquals(10, $producto->fresh()->stock);
+    }
+
+    /** @test */
+    public function webhook_refunded_transitions_paid_order_to_cancelled_and_restores_stock()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create(['estado' => 'pagado']);
+        
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $paymentId = '11223344';
+        $requestId = 'req_id_6';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentId, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId}" => Http::response([
+                'status' => 'refunded',
+                'external_reference' => $pedido->id
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data.id=' . $paymentId, [
+            'type' => 'payment',
+            'data' => ['id' => $paymentId]
+        ], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        // Debe pasar a cancelado
+        $this->assertEquals('cancelado', $pedido->fresh()->estado);
+        // Debe reponerse stock: 10 + 4 = 14
+        $this->assertEquals(14, $producto->fresh()->stock);
+    }
 }

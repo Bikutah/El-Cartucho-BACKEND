@@ -350,9 +350,22 @@ class PedidoController extends Controller
                 DB::commit();
             } catch (\Exception $rollbackException) {
                 DB::rollBack();
-                Log::error("Error al reponer stock tras fallo de preferencia MercadoPago", [
+
+                $detallesSinReponer = [];
+                try {
+                    $detallesAReponer = DetallePedido::where('pedido_id', $pedido->id)->get();
+                    foreach ($detallesAReponer as $detalle) {
+                        $detallesSinReponer[] = "producto_id: {$detalle->producto_id}, cantidad: {$detalle->cantidad}";
+                    }
+                } catch (\Exception $detailsEx) {
+                    $detallesSinReponer[] = "No se pudieron consultar los detalles del pedido";
+                }
+
+                Log::critical("FALLO CRÍTICO: No se pudo revertir el stock para el pedido fallido ID: {$pedido->id}", [
                     'pedido_id' => $pedido->id,
-                    'error' => $rollbackException->getMessage()
+                    'detalles_sin_reponer' => $detallesSinReponer,
+                    'error_rollback' => $rollbackException->getMessage(),
+                    'error_original' => $e->getMessage()
                 ]);
             }
 

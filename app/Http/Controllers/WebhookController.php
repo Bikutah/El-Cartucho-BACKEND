@@ -58,6 +58,22 @@ class WebhookController extends Controller
                 return response()->json(['error' => 'Pedido no encontrado'], 404);
             }
 
+            // Si el pedido ya está pagado o cancelado (estados terminales)
+            // y el evento trae un estado no-terminal, bloqueamos la actualización.
+            $terminalStates = ['pagado', 'cancelado'];
+            $nonTerminalEventStatuses = ['pending', 'in_process', 'authorized', 'in_mediation'];
+
+            if (in_array($pedido->estado, $terminalStates) && in_array($status, $nonTerminalEventStatuses)) {
+                Log::warning("Intento de retroceso de estado ignorado en webhook de MercadoPago para el pedido #{$pedido->id}.", [
+                    'pedido_id' => $pedido->id,
+                    'estado_actual' => $pedido->estado,
+                    'estado_evento' => $status,
+                    'payment_id' => $paymentId
+                ]);
+                DB::commit();
+                return response()->json(['message' => 'Intento de retroceso ignorado'], 200);
+            }
+
             // Guardamos el mercado_pago_id
             $pedido->mercado_pago_id = $paymentId;
 
