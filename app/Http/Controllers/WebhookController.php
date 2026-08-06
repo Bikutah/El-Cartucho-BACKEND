@@ -17,27 +17,6 @@ class WebhookController extends Controller
         $topic = $request->input('topic') ?? $request->input('type');
         $paymentId = $request->input('data.id') ?? $request->input('id');
 
-        // 🧪 BLOQUE DE SIMULACIÓN (cuando id = 999999)
-        if ($paymentId == 999999) {
-            $pedido = Pedido::find(1); // Simulamos sobre el pedido 1
-
-            if (!$pedido) {
-                return response()->json(['error' => 'Pedido no encontrado (simulado)'], 404);
-            }
-
-            $pedido->estado = 'pagado';
-            $pedido->mercado_pago_id = $paymentId;
-            $pedido->save();
-
-            Log::info("✅ Simulación: Pedido {$pedido->id} actualizado a 'pagado' desde webhook mock");
-
-            return response()->json([
-                'message' => 'Simulación exitosa',
-                'pedido_id' => $pedido->id,
-                'estado' => $pedido->estado
-            ]);
-        }
-
         // ⚠️ Si no es mock, va al flujo real
         if ($topic !== 'payment' || !$paymentId) {
             return response()->json(['message' => 'Evento ignorado'], 200);
