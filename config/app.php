@@ -54,6 +54,8 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    'stock_image_url' => env('STOCK_IMAGE_URL', '/placeholder.svg'),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

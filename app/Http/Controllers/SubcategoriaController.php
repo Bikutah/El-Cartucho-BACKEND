@@ -133,6 +133,17 @@ class SubcategoriaController extends Controller
 
     public function destroy(string $id)
     {
-        //
+        $subcategoria = Subcategoria::findOrFail($id);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($subcategoria) {
+            $subcategoria->productos()->detach();
+            $subcategoria->delete();
+        });
+
+        if (request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Subcategoría eliminada correctamente.']);
+        }
+
+        return redirect()->route('subcategorias.index')->with('success', 'Subcategoría eliminada correctamente.');
     }
 }

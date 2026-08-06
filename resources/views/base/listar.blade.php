@@ -111,6 +111,7 @@ $(document).ready(function () {
 
     // Manejo del modal y eliminación
     let currentRowId = null;
+    let currentActionUrl = null;
 
     $(document).on('show.bs.modal', '#modalEliminar', function (event) {
         console.log('Evento show.bs.modal disparado');
@@ -121,19 +122,20 @@ $(document).ready(function () {
         }
 
         currentRowId = button.getAttribute('data-id');
-        console.log('ID del producto:', currentRowId);
+        currentActionUrl = button.getAttribute('data-action') || `/productos/${currentRowId}`;
+        console.log('ID y Action:', currentRowId, currentActionUrl);
     });
 
     $(document).on('submit', '#formEliminar', function (e) {
         e.preventDefault();
         console.log('Evento submit disparado');
 
-        if (!currentRowId) {
-            console.error('Error: ID del producto no definido');
+        if (!currentActionUrl) {
+            console.error('Error: Action URL no definida');
             return;
         }
 
-        const action = `/productos/${currentRowId}`;
+        const action = currentActionUrl;
         console.log('Enviando solicitud a:', action);
 
         // Mostrar spinner y deshabilitar botón
@@ -190,7 +192,7 @@ $(document).ready(function () {
                             <i class="fas fa-check-circle fa-lg"></i>
                         </div>
                         <div>
-                            Producto eliminado correctamente
+                            ${data.message || 'Elemento eliminado correctamente'}
                         </div>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>

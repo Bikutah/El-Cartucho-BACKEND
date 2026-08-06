@@ -32,6 +32,18 @@
     $items = $productos;
 
     $renderFila = function($producto) {
+        $catsHtml = '';
+        if ($producto->categorias->isNotEmpty()) {
+            foreach ($producto->categorias->take(2) as $cat) {
+                $catsHtml .= '<span class="badge bg-secondary me-1">' . e($cat->nombre) . '</span>';
+            }
+            if ($producto->categorias->count() > 2) {
+                $catsHtml .= '<span class="badge bg-light text-dark">+' . e($producto->categorias->count() - 2) . '</span>';
+            }
+        } else {
+            $catsHtml = '<span class="text-muted small">Sin categoría</span>';
+        }
+
         return '
             <div class="table-cell">
                 <span class="table-cell-label">Id:</span>
@@ -65,7 +77,7 @@
             </div>
             <div class="table-cell">
                 <span class="table-cell-label">Categoría:</span>
-                <span>' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</span>
+                <span>' . $catsHtml . '</span>
             </div>
             <div class="table-cell">
                 <span class="table-cell-label">Imágenes:</span>
@@ -73,7 +85,7 @@
                     <a href="' . route('productos.imagenes', $producto) . '" class="action-btn"
                     data-bs-toggle="tooltip" data-bs-placement="top" title="Ver,eliminar y agregar imágenes">
                         <i class="fas fa-images"></i>
-                        <span class="badge bg-light text-dark">' . count($producto->imagenes) . '</span>
+                        <span class="badge bg-light text-dark">' . e(count($producto->imagenes)) . '</span>
                     </a>
                 </span>
             </div>';

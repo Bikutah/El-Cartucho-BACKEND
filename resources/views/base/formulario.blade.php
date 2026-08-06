@@ -32,29 +32,57 @@
                         {{ $label }}
                     </label>
 
+                    {{-- Campo CATEGORY_SELECTOR --}}
+                    @if ($type === 'category_selector')
+                        <div class="position-relative mb-2">
+                            <input
+                                type="text"
+                                id="buscar_categoria_input"
+                                class="form-control"
+                                placeholder="{{ $placeholder ?: 'Buscar y seleccionar categorías...' }}"
+                                autocomplete="off"
+                            >
+                            <div id="categoria_dropdown" class="list-group position-absolute w-100 shadow mt-1 d-none" style="z-index: 1050; max-height: 200px; overflow-y: auto;">
+                                @foreach (($campo['options'] ?? []) as $optionValue => $optionText)
+                                    <button type="button" class="list-group-item list-group-item-action item-categoria-option" data-id="{{ $optionValue }}" data-nombre="{{ $optionText }}">
+                                        {{ $optionText }}
+                                    </button>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div id="categoria_chips_container" class="d-flex flex-wrap gap-2 mb-3"></div>
+                        <div id="categoria_hidden_inputs"></div>
+
+                        <div class="mb-3 mt-2">
+                            <label class="form-label fw-semibold" style="color: var(--color-secundario);">Subcategorías</label>
+                            <div id="subcategorias-container" class="border rounded p-2 bg-light">
+                                <p class="mb-0 text-muted">Seleccione primero una categoría para ver las subcategorías disponibles</p>
+                            </div>
+                        </div>
+
                     {{-- Campo SELECT --}}
-                    @if ($type === 'select')
+                    @elseif ($type === 'select')
                         <select
                             id="{{ $id }}"
                             name="{{ $name }}"
                             class="form-select"
+                            {{ $multiple ? 'multiple' : '' }}
                         >
-                            <option value="">{{ $placeholder ?: 'Seleccione una opción' }}</option>
+                            @if (!$multiple)
+                                <option value="">{{ $placeholder ?: 'Seleccione una opción' }}</option>
+                            @endif
                             @foreach (($campo['options'] ?? []) as $optionValue => $optionText)
-                                <option value="{{ $optionValue }}" {{ $value == $optionValue ? 'selected' : '' }}>
+                                @php
+                                    $isSelected = is_array($value)
+                                        ? in_array((string)$optionValue, array_map('strval', $value), true)
+                                        : ($value == $optionValue);
+                                @endphp
+                                <option value="{{ $optionValue }}" {{ $isSelected ? 'selected' : '' }}>
                                     {{ $optionText }}
                                 </option>
                             @endforeach
                         </select>
-                        <!-- Campo personalizado para subcategorías con checkboxes -->
-                        @if (isset($esProducto) && $esProducto)
-                                <div class="mb-3 mt-2">
-                                    <label class="form-label fw-semibold" style="color: var(--color-secundario);">Subcategorías</label>
-                                    <div id="subcategorias-container" class="border rounded p-2 bg-light">
-                                        <p class="mb-0">Seleccione primero una categoría para ver las subcategorías disponibles</p>
-                                    </div>
-                                </div>
-                        @endif
                     {{-- Campo TEXTAREA --}}
                     @elseif ($type === 'textarea')
                         <textarea

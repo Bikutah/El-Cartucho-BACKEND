@@ -10,6 +10,7 @@
 
     $rutaCrear = 'categorias.create';
     $rutaEditar = 'categorias.edit';
+    $rutaEliminar = 'categorias.destroy';
     
     $columnas = [
         ['label' => 'Id'],

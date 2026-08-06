@@ -159,6 +159,29 @@ class CategoriaController extends Controller
      */
     public function destroy(string $id)
     {
-        //
+        $categoria = Categoria::findOrFail($id);
+
+        \Illuminate\Support\Facades\DB::transaction(function () use ($categoria) {
+            // a) Poner categoria_id en NULL en los productos que la referencian (referencia dura)
+            \App\Models\Producto::where('categoria_id', $categoria->id)->update(['categoria_id' => null]);
+
+            // b) Detach del pivot (referencia blanda)
+            $categoria->productos()->detach();
+
+            // Subcategorías hijas
+            foreach ($categoria->subcategorias as $subcategoria) {
+                $subcategoria->productos()->detach();
+                $subcategoria->delete();
+            }
+
+            // c) Delete de la categoría
+            $categoria->delete();
+        });
+
+        if (request()->ajax()) {
+            return response()->json(['success' => true, 'message' => 'Categoría eliminada correctamente.']);
+        }
+
+        return redirect()->route('categorias.index')->with('success', 'Categoría eliminada correctamente.');
     }
 }

@@ -54,11 +54,11 @@ class EstadisticasController extends Controller
     // Método para distribución de productos por categoría (Pie Chart)
     public function distribucionProductos()
     {
-        $productos = DB::table('productos')
-            ->join('categorias', 'productos.categoria_id', '=', 'categorias.id')
+        $productos = DB::table('categoria_producto')
+            ->join('categorias', 'categoria_producto.categoria_id', '=', 'categorias.id')
             ->selectRaw('
                 categorias.nombre as categoria,
-                COUNT(productos.id) as cantidad
+                COUNT(categoria_producto.producto_id) as cantidad
             ')
             ->groupBy('categorias.id', 'categorias.nombre')
             ->orderBy('cantidad', 'desc')
@@ -116,7 +116,8 @@ class EstadisticasController extends Controller
     {
         $categorias = DB::table('detalle_pedido')
             ->join('productos', 'detalle_pedido.producto_id', '=', 'productos.id')
-            ->join('categorias', 'productos.categoria_id', '=', 'categorias.id')
+            ->join('categoria_producto', 'productos.id', '=', 'categoria_producto.producto_id')
+            ->join('categorias', 'categoria_producto.categoria_id', '=', 'categorias.id')
             ->join('pedidos', 'detalle_pedido.pedido_id', '=', 'pedidos.id')
             ->selectRaw('
                 categorias.nombre as categoria,
@@ -211,7 +212,8 @@ class EstadisticasController extends Controller
             // Categoría más vendida
             'categoria_top' => DB::table('detalle_pedido')
                 ->join('productos', 'detalle_pedido.producto_id', '=', 'productos.id')
-                ->join('categorias', 'productos.categoria_id', '=', 'categorias.id')
+                ->join('categoria_producto', 'productos.id', '=', 'categoria_producto.producto_id')
+                ->join('categorias', 'categoria_producto.categoria_id', '=', 'categorias.id')
                 ->join('pedidos', 'detalle_pedido.pedido_id', '=', 'pedidos.id')
                 ->selectRaw('categorias.nombre, SUM(detalle_pedido.cantidad) as total_cantidad')
                 ->where('pedidos.estado', '!=', 'cancelado')
