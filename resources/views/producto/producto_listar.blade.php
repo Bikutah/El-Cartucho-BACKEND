@@ -65,7 +65,18 @@
             </div>
             <div class="table-cell">
                 <span class="table-cell-label">Categoría:</span>
-                <span>' . e(optional($producto->categoria)->nombre ?? 'Sin categoría') . '</span>
+                <span>
+                    @if($producto->categorias->isNotEmpty())
+                        @foreach($producto->categorias->take(2) as $cat)
+                            <span class="badge bg-secondary me-1">{{ $cat->nombre }}</span>
+                        @endforeach
+                        @if($producto->categorias->count() > 2)
+                            <span class="badge bg-light text-dark">+{{ $producto->categorias->count() - 2 }}</span>
+                        @endif
+                    @else
+                        <span class="text-muted small">Sin categoría</span>
+                    @endif
+                </span>
             </div>
             <div class="table-cell">
                 <span class="table-cell-label">Imágenes:</span>

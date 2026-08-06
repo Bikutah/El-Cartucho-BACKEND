@@ -38,10 +38,18 @@
                             id="{{ $id }}"
                             name="{{ $name }}"
                             class="form-select"
+                            {{ $multiple ? 'multiple' : '' }}
                         >
-                            <option value="">{{ $placeholder ?: 'Seleccione una opción' }}</option>
+                            @if (!$multiple)
+                                <option value="">{{ $placeholder ?: 'Seleccione una opción' }}</option>
+                            @endif
                             @foreach (($campo['options'] ?? []) as $optionValue => $optionText)
-                                <option value="{{ $optionValue }}" {{ $value == $optionValue ? 'selected' : '' }}>
+                                @php
+                                    $isSelected = is_array($value)
+                                        ? in_array((string)$optionValue, array_map('strval', $value), true)
+                                        : ($value == $optionValue);
+                                @endphp
+                                <option value="{{ $optionValue }}" {{ $isSelected ? 'selected' : '' }}>
                                     {{ $optionText }}
                                 </option>
                             @endforeach

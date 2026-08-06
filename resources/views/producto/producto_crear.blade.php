@@ -55,11 +55,13 @@
             'accept' => 'image/*',
         ],
         [
-            'name' => 'categoria_id',
-            'label' => 'Categoría',
-            'placeholder' => 'Seleccione una categoría',
+            'name' => 'categorias[]',
+            'label' => 'Categorías',
+            'placeholder' => 'Seleccione una o más categorías',
             'type' => 'select',
+            'multiple' => true,
             'options' => $categorias->pluck('nombre', 'id'),
+            'value' => old('categorias', []),
             'required' => false,
             'attributes' => ['id' => 'categoria_id'],
         ],
@@ -78,41 +80,51 @@
             const subcategoriasData = JSON.parse(subcategoriasDataInput.value || '{}');
 
             function updateSubcategorias() {
-                const categoriaId = categoriaSelect.value;
+                const selectedOptions = Array.from(categoriaSelect.selectedOptions).map(opt => opt.value).filter(Boolean);
                 subcategoriasContainer.innerHTML = '';
-                if (categoriaId && subcategoriasData[categoriaId]) {
-                    const subcategorias = subcategoriasData[categoriaId].subcategorias;
 
-                    if (Object.keys(subcategorias).length > 0) {
-                        const title = document.createElement('p');
-                        title.className = 'mb-2 fw-bold';
-                        title.textContent = 'Subcategorías disponibles:';
-                        subcategoriasContainer.appendChild(title);
-
-                        for (const [id, nombre] of Object.entries(subcategorias)) {
-                            const checkboxDiv = document.createElement('div');
-                            checkboxDiv.className = 'form-check';
-                            
-                            const checkbox = document.createElement('input');
-                            checkbox.className = 'form-check-input';
-                            checkbox.type = 'checkbox';
-                            checkbox.name = 'subcategorias[]';
-                            checkbox.value = id;
-                            checkbox.id = `subcategoria_${id}`;
-                            
-                            const label = document.createElement('label');
-                            label.className = 'form-check-label';
-                            label.htmlFor = `subcategoria_${id}`;
-                            label.textContent = nombre;
-                            
-                            checkboxDiv.appendChild(checkbox);
-                            checkboxDiv.appendChild(label);
-                            subcategoriasContainer.appendChild(checkboxDiv);
-                            console.log("hola")
+                let hasSubcategorias = false;
+                selectedOptions.forEach(categoriaId => {
+                    if (subcategoriasData[categoriaId] && subcategoriasData[categoriaId].subcategorias) {
+                        if (Object.keys(subcategoriasData[categoriaId].subcategorias).length > 0) {
+                            hasSubcategorias = true;
                         }
-                    } else {
-                        subcategoriasContainer.innerHTML = '<p class="text-muted mb-0">No hay subcategorías disponibles para esta categoría</p>';
                     }
+                });
+
+                if (hasSubcategorias) {
+                    const title = document.createElement('p');
+                    title.className = 'mb-2 fw-bold';
+                    title.textContent = 'Subcategorías disponibles:';
+                    subcategoriasContainer.appendChild(title);
+
+                    selectedOptions.forEach(categoriaId => {
+                        if (subcategoriasData[categoriaId] && subcategoriasData[categoriaId].subcategorias) {
+                            const subcategorias = subcategoriasData[categoriaId].subcategorias;
+                            for (const [id, nombre] of Object.entries(subcategorias)) {
+                                const checkboxDiv = document.createElement('div');
+                                checkboxDiv.className = 'form-check';
+                                
+                                const checkbox = document.createElement('input');
+                                checkbox.className = 'form-check-input';
+                                checkbox.type = 'checkbox';
+                                checkbox.name = 'subcategorias[]';
+                                checkbox.value = id;
+                                checkbox.id = `subcategoria_${id}`;
+                                
+                                const label = document.createElement('label');
+                                label.className = 'form-check-label';
+                                label.htmlFor = `subcategoria_${id}`;
+                                label.textContent = nombre;
+                                
+                                checkboxDiv.appendChild(checkbox);
+                                checkboxDiv.appendChild(label);
+                                subcategoriasContainer.appendChild(checkboxDiv);
+                            }
+                        }
+                    });
+                } else if (selectedOptions.length > 0) {
+                    subcategoriasContainer.innerHTML = '<p class="text-muted mb-0">No hay subcategorías disponibles para las categorías seleccionadas</p>';
                 } else {
                     subcategoriasContainer.innerHTML = '<p class="text-muted mb-0">Seleccione primero una categoría para ver las subcategorías disponibles</p>';
                 }
