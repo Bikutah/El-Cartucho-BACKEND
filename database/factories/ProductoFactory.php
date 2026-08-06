@@ -24,4 +24,9 @@ class ProductoFactory extends Factory
             'categoria_id' => \App\Models\Categoria::factory(),
         ];
     }
+
+    public function conImagenes(int $count = 3): static
+    {
+        return $this->has(\App\Models\Imagen::factory()->count($count), 'imagenes');
+    }
 }

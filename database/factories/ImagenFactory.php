@@ -16,10 +16,12 @@ class ImagenFactory extends Factory
      */
     public function definition(): array
     {
+        static $counter = 1;
+        $id = $counter++;
         return [
             'producto_id' => \App\Models\Producto::factory(),
-            'imagen_url' => $this->faker->imageUrl(),
-            'imagen_public_id' => $this->faker->uuid(),
+            'imagen_url' => "https://picsum.photos/seed/img{$id}/600/600",
+            'imagen_public_id' => "seed/img-{$id}",
         ];
     }
 }
