@@ -62,7 +62,18 @@ class ProductoController extends Controller
                 'rutaEditar' => 'productos.edit',
                 'rutaEliminar' => 'productos.destroy',
                 'renderFila' => function ($producto) {
-                    $nombresCat = $producto->categorias->pluck('nombre')->join(', ');
+                    $catsHtml = '';
+                    if ($producto->categorias->isNotEmpty()) {
+                        foreach ($producto->categorias->take(2) as $cat) {
+                            $catsHtml .= '<span class="badge bg-secondary me-1">' . e($cat->nombre) . '</span>';
+                        }
+                        if ($producto->categorias->count() > 2) {
+                            $catsHtml .= '<span class="badge bg-light text-dark">+' . e($producto->categorias->count() - 2) . '</span>';
+                        }
+                    } else {
+                        $catsHtml = '<span class="text-muted small">Sin categoría</span>';
+                    }
+
                     return '
                     <div class="table-cell">' . e($producto->id) . '</div>
                     <div class="table-cell nombre">
@@ -85,12 +96,12 @@ class ProductoController extends Controller
                     </div>
                     <div class="table-cell">$' . number_format($producto->precioUnitario, 2, ',', '.') . '</div>
                     <div class="table-cell">' . e($producto->stock) . '</div>
-                    <div class="table-cell">' . e($nombresCat ?: 'Sin categoría') . '</div>
+                    <div class="table-cell">' . $catsHtml . '</div>
                     <div class="table-cell">
                         <a href="' . route('productos.imagenes', $producto) . '" class="action-btn"
                         data-bs-toggle="tooltip" data-bs-placement="top" title="Ver imágenes">
                             <i class="fas fa-images"></i>
-                            <span class="badge bg-light text-dark">' . count($producto->imagenes) . '</span>
+                            <span class="badge bg-light text-dark">' . e(count($producto->imagenes)) . '</span>
                         </a>
                     </div>';
                 }

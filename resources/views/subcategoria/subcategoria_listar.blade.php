@@ -4,6 +4,7 @@
     $titulo = 'Listado de Subcategorías';
     $rutaCrear = 'subcategorias.create';
     $rutaEditar = 'subcategorias.edit';
+    $rutaEliminar = 'subcategorias.destroy';
     
     $columnas = [
         ['label' => 'Id'],

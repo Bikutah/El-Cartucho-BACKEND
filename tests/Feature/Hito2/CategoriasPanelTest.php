@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Models\Producto;
 use App\Models\Categoria;
 use App\Models\Subcategoria;
+use Illuminate\Support\Facades\DB;
 
 class CategoriasPanelTest extends TestCase
 {
@@ -19,6 +20,70 @@ class CategoriasPanelTest extends TestCase
     {
         parent::setUp();
         $this->user = User::factory()->create();
+    }
+
+    public function test_get_productos_renderiza_200_y_no_contiene_directivas_blade_literales()
+    {
+        $cat = Categoria::factory()->create();
+        $prod = Producto::factory()->create(['categoria_id' => null]);
+        $prod->categorias()->attach($cat->id);
+
+        $response = $this->actingAs($this->user)->get('/productos');
+
+        $response->assertStatus(200);
+        $response->assertDontSee('@if');
+        $response->assertDontSee('@foreach');
+    }
+
+    public function test_producto_con_dos_categorias_muestra_ambas_en_el_listado()
+    {
+        $cat1 = Categoria::factory()->create(['nombre' => 'Consolas Retro']);
+        $cat2 = Categoria::factory()->create(['nombre' => 'Cartuchos']);
+        $prod = Producto::factory()->create(['categoria_id' => null]);
+        $prod->categorias()->sync([$cat1->id, $cat2->id]);
+
+        $response = $this->actingAs($this->user)->get('/productos');
+
+        $response->assertStatus(200);
+        $response->assertSee('Consolas Retro');
+        $response->assertSee('Cartuchos');
+    }
+
+    public function test_producto_sin_categorias_no_rompe_el_listado()
+    {
+        Producto::factory()->create(['categoria_id' => null]);
+
+        $response = $this->actingAs($this->user)->get('/productos');
+
+        $response->assertStatus(200);
+        $response->assertSee('Sin categoría');
+    }
+
+    public function test_get_subcategorias_renderiza_el_boton_de_eliminar_en_cada_fila()
+    {
+        $cat = Categoria::factory()->create();
+        Subcategoria::factory()->create(['categoria_id' => $cat->id]);
+
+        $response = $this->actingAs($this->user)->get('/subcategorias');
+
+        $response->assertStatus(200);
+        $response->assertSee('modalEliminar');
+        $response->assertSee('title="Eliminar"', false);
+    }
+
+    public function test_get_producto_edit_trae_las_categorias_del_producto_preseleccionadas()
+    {
+        $cat1 = Categoria::factory()->create(['nombre' => 'Juegos CD']);
+        $cat2 = Categoria::factory()->create(['nombre' => 'Accesorios']);
+        $prod = Producto::factory()->create(['categoria_id' => null]);
+        $prod->categorias()->sync([$cat1->id, $cat2->id]);
+
+        $response = $this->actingAs($this->user)->get('/productos/' . $prod->id . '/edit');
+
+        $response->assertStatus(200);
+        $response->assertSee('initial-categories');
+        $response->assertSee((string)$cat1->id);
+        $response->assertSee((string)$cat2->id);
     }
 
     public function test_borrar_categoria_desde_el_panel_devuelve_exito_y_no_borra_productos()
@@ -136,5 +201,23 @@ class CategoriasPanelTest extends TestCase
         $this->assertCount(1, $prod->fresh()->categorias);
         $this->assertTrue($prod->fresh()->categorias->contains($cat1->id));
         $this->assertFalse($prod->fresh()->categorias->contains($cat2->id));
+    }
+
+    public function test_n_plus_1_queries_listado_admin()
+    {
+        $cat = Categoria::factory()->create();
+        
+        for ($i = 0; $i < 40; $i++) {
+            $p = Producto::factory()->create(['categoria_id' => null]);
+            $p->categorias()->attach($cat->id);
+        }
+
+        DB::enableQueryLog();
+        $this->actingAs($this->user)->get('/productos');
+        $queriesListado = count(DB::getQueryLog());
+        DB::disableQueryLog();
+
+        // Verificar que no haya queries excesivas
+        $this->assertLessThan(15, $queriesListado);
     }
 }
