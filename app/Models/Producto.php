@@ -32,6 +32,10 @@ class Producto extends Model
     {
         return $this->belongsToMany(Subcategoria::class, 'producto_subcategoria');
     }
+    public function categorias()
+    {
+        return $this->belongsToMany(Categoria::class, 'categoria_producto');
+    }
     public function getPrimeraImagenAttribute()
     {
         return $this->imagenes->first();
