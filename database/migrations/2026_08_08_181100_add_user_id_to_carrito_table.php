@@ -29,9 +29,12 @@ return new class extends Migration
         ");
 
         // Reemplazar el índice único [firebase_uid, producto_id] por [user_id, producto_id]
-        Schema::table('carrito', function (Blueprint $table) {
-            $table->dropUnique(['firebase_uid', 'producto_id']);
-        });
+        if (DB::getDriverName() === 'sqlite') {
+            DB::statement('DROP INDEX IF EXISTS carrito_firebase_uid_producto_id_unique');
+        } else {
+            DB::statement('ALTER TABLE carrito DROP CONSTRAINT IF EXISTS carrito_firebase_uid_producto_id_unique');
+            DB::statement('DROP INDEX IF EXISTS carrito_firebase_uid_producto_id_unique');
+        }
 
         DB::statement('
             CREATE UNIQUE INDEX carrito_user_id_producto_id_unique
