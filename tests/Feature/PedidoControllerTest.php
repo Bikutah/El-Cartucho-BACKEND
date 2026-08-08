@@ -21,6 +21,13 @@ class PedidoControllerTest extends TestCase
         Config::set('mercadopago.front_url', 'http://localhost:3000');
         Config::set('mercadopago.notification_url', 'http://localhost/webhook');
         Config::set('mercadopago.expiration_hours', 72);
+
+        $user = \App\Models\User::factory()->create(['firebase_uid' => 'test-pedido-uid']);
+        $this->actingAs($user);
+        $this->withoutMiddleware([
+            \App\Http\Middleware\VerificarTokenFirebase::class,
+            \App\Http\Middleware\RequerirUsuarioLocal::class,
+        ]);
     }
 
     /** @test */
