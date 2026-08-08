@@ -270,4 +270,17 @@ class VerificarTokenFirebaseTest extends TestCase
 
         $response2->assertStatus(401);
     }
+
+    public function test_migraciones_carrito_y_wishlist_crean_columna_user_id_e_indices_unicos(): void
+    {
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('carrito', 'user_id'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('wishlist', 'user_id'));
+
+        $indexes = \Illuminate\Support\Facades\DB::select("SELECT name, sql FROM sqlite_master WHERE type='index' AND name LIKE '%user_id_producto_id_unique%'");
+        $this->assertCount(2, $indexes);
+
+        foreach ($indexes as $index) {
+            $this->assertStringContainsString('user_id IS NOT NULL', $index->sql);
+        }
+    }
 }
