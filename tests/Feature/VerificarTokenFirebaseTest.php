@@ -283,4 +283,32 @@ class VerificarTokenFirebaseTest extends TestCase
             $this->assertStringContainsString('user_id IS NOT NULL', $index->sql);
         }
     }
+
+    public function test_crear_item_de_wishlist_y_carrito_sin_firebase_uid_asocia_user_id_correcto(): void
+    {
+        $user = User::factory()->create(['firebase_uid' => 'uid-sin-firebase-insert']);
+        $producto = Producto::factory()->create(['stock' => 10, 'precioUnitario' => 100]);
+        $token = $this->crearTokenValido($user->firebase_uid, $user->email, $user->name);
+
+        // Toggle Wishlist
+        $respWish = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/ed/wishlist/toggle', ['producto_id' => $producto->id]);
+        $respWish->assertStatus(200);
+        $respWish->assertJson(['action' => 'added']);
+
+        $wishItem = \App\Models\Wishlist::where('user_id', $user->id)->first();
+        $this->assertNotNull($wishItem);
+        $this->assertEquals($user->id, $wishItem->user_id);
+        $this->assertEquals($producto->id, $wishItem->producto_id);
+
+        // Upsert Carrito
+        $respCart = $this->withHeader('Authorization', "Bearer {$token}")
+            ->postJson('/ed/carrito', ['producto_id' => $producto->id, 'cantidad' => 2]);
+        $respCart->assertStatus(200);
+
+        $cartItem = \App\Models\Carrito::where('user_id', $user->id)->first();
+        $this->assertNotNull($cartItem);
+        $this->assertEquals($user->id, $cartItem->user_id);
+        $this->assertEquals(2, $cartItem->cantidad);
+    }
 }

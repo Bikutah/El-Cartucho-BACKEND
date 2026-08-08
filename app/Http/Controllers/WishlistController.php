@@ -47,9 +47,8 @@ class WishlistController extends Controller
         }
 
         Wishlist::create([
-            'user_id'      => $userId,
-            'firebase_uid' => $request->user()->firebase_uid,
-            'producto_id'  => $request->producto_id,
+            'user_id'     => $userId,
+            'producto_id' => $request->producto_id,
         ]);
 
         return response()->json(['action' => 'added']);
