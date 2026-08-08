@@ -29,11 +29,13 @@ class ClienteController extends Controller
             ->addSelect([
                 'ultimo_pedido_fecha' => Pedido::select('created_at')
                     ->whereColumn('user_id', 'users.id')
-                    ->latest()
+                    ->orderByDesc('created_at')
+                    ->orderByDesc('id')
                     ->limit(1),
                 'ultimo_pedido_estado' => Pedido::select('estado')
                     ->whereColumn('user_id', 'users.id')
-                    ->latest()
+                    ->orderByDesc('created_at')
+                    ->orderByDesc('id')
                     ->limit(1),
             ]);
 
@@ -56,7 +58,7 @@ class ClienteController extends Controller
 
         if ($request->filled('ultimo_estado')) {
             $estado = $request->input('ultimo_estado');
-            $query->whereRaw('(SELECT estado FROM pedidos WHERE user_id = users.id ORDER BY created_at DESC LIMIT 1) = ?', [$estado]);
+            $query->whereRaw('(SELECT estado FROM pedidos WHERE user_id = users.id ORDER BY created_at DESC, id DESC LIMIT 1) = ?', [$estado]);
         }
 
         if ($request->filled('fecha_desde')) {
