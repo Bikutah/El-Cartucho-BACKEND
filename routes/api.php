@@ -10,11 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\WishlistController;
 
-Route::get('/user', function (Request $request) {
-    return $request->user();
-})->middleware('auth:sanctum');
-
-// Endpoints
+// ─── Sin autenticación ───────────────────────────────────────────────────────
 
 #Mercado Pago
 Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
@@ -25,26 +21,36 @@ Route::get('/producto/{id}', [ProductoController::class, 'obtenerProductoConReso
 Route::get('/productosRecientes', [ProductoController::class, 'obtenerProductosRecientes']);
 Route::get('/productosMasVendidos', [ProductoController::class, 'obtenerProductosMasVendidos']);
 
-#Pedidos
-Route::post('/pedido/crear', [PedidoController::class, 'store']);
-Route::get('/pedido/costo/{cp}', [PedidoController::class, 'calcularCostoEnvio']);
-Route::get('/mis-pedidos', [PedidoController::class, 'misPedidos']);
-
 #Categorias
 Route::get('/categorias', [CategoriaController::class, 'apiList']);
 
-#Perfil
-Route::get('/profile', [ProfileController::class, 'getProfile']);
-Route::post('/profile', [ProfileController::class, 'updateProfile']);
+#Envío (cálculo de costo, no requiere usuario)
+Route::get('/pedido/costo/{cp}', [PedidoController::class, 'calcularCostoEnvio']);
 
-#Carrito
-Route::get('/carrito', [CarritoController::class, 'index']);
-Route::post('/carrito', [CarritoController::class, 'upsert']);
-Route::delete('/carrito/{productoId}', [CarritoController::class, 'removeItem']);
-Route::delete('/carrito', [CarritoController::class, 'clear']);
+// ─── Token verificado (sin requerir usuario local) ───────────────────────────
+// GET /profile tolera que el usuario no exista aún; el controller hace firstOrCreate.
+Route::middleware(['firebase.token'])->group(function () {
+    Route::get('/profile', [ProfileController::class, 'getProfile']);
+});
 
-#Wishlist
-Route::get('/wishlist', [WishlistController::class, 'index']);
-Route::post('/wishlist/toggle', [WishlistController::class, 'toggle']);
-Route::get('/wishlist/check/{productoId}', [WishlistController::class, 'check']);
-Route::delete('/wishlist/{productoId}', [WishlistController::class, 'remove']);
+// ─── Token verificado + usuario local existente ──────────────────────────────
+Route::middleware(['firebase.token', 'firebase.user'])->group(function () {
+    #Perfil
+    Route::post('/profile', [ProfileController::class, 'updateProfile']);
+
+    #Pedidos
+    Route::post('/pedido/crear', [PedidoController::class, 'store']);
+    Route::get('/mis-pedidos', [PedidoController::class, 'misPedidos']);
+
+    #Carrito
+    Route::get('/carrito', [CarritoController::class, 'index']);
+    Route::post('/carrito', [CarritoController::class, 'upsert']);
+    Route::delete('/carrito/{productoId}', [CarritoController::class, 'removeItem']);
+    Route::delete('/carrito', [CarritoController::class, 'clear']);
+
+    #Wishlist
+    Route::get('/wishlist', [WishlistController::class, 'index']);
+    Route::post('/wishlist/toggle', [WishlistController::class, 'toggle']);
+    Route::get('/wishlist/check/{productoId}', [WishlistController::class, 'check']);
+    Route::delete('/wishlist/{productoId}', [WishlistController::class, 'remove']);
+});
