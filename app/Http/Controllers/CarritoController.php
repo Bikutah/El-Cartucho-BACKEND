@@ -44,7 +44,10 @@ class CarritoController extends Controller
 
         $item = Carrito::updateOrCreate(
             ['user_id' => $userId, 'producto_id' => $request->producto_id],
-            ['cantidad' => $cantidad]
+            [
+                'firebase_uid' => $request->user()->firebase_uid,
+                'cantidad'     => $cantidad,
+            ]
         );
 
         return response()->json($item);
