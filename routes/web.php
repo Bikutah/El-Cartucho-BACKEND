@@ -13,6 +13,8 @@ use Illuminate\Http\Request;
 use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\EstadisticasController;
 
+use App\Http\Controllers\ClienteController;
+
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'login'])->name('login.submit');
@@ -27,6 +29,8 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
 
     Route::resource('pedidos', PedidoController::class);
     Route::get('/pedidos/{id}/imprimir', [PedidoController::class, 'imprimir'])->name('pedidos.imprimir');
+
+    Route::resource('clientes', ClienteController::class)->only(['index', 'show']);
 
     # Productos
     Route::resource('productos', ProductoController::class);
