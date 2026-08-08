@@ -2,35 +2,29 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Wishlist;
+use Illuminate\Http\Request;
 
 class WishlistController extends Controller
 {
-    private function getUid(Request $request): ?string
-    {
-        return $request->header('X-Firebase-UID');
-    }
-
     public function index(Request $request)
     {
-        $uid = $this->getUid($request);
-        if (!$uid) return response()->json(['error' => 'No autenticado'], 401);
+        $userId = $request->user()->id;
 
         $items = Wishlist::with(['producto.imagenes'])
-            ->where('firebase_uid', $uid)
+            ->where('user_id', $userId)
             ->get()
             ->map(function ($item) {
                 $producto = $item->producto;
                 $imagen = $producto->imagenes->first()?->url ?? null;
                 return [
-                    'wishlist_id'  => $item->id,
-                    'producto_id'  => $producto->id,
-                    'nombre'       => $producto->nombre,
-                    'precio'       => (float) $producto->precioUnitario,
-                    'stock'        => $producto->stock,
-                    'image'        => $imagen,
-                    'created_at'   => $item->created_at,
+                    'wishlist_id' => $item->id,
+                    'producto_id' => $producto->id,
+                    'nombre'      => $producto->nombre,
+                    'precio'      => (float) $producto->precioUnitario,
+                    'stock'       => $producto->stock,
+                    'image'       => $imagen,
+                    'created_at'  => $item->created_at,
                 ];
             });
 
@@ -39,12 +33,11 @@ class WishlistController extends Controller
 
     public function toggle(Request $request)
     {
-        $uid = $this->getUid($request);
-        if (!$uid) return response()->json(['error' => 'No autenticado'], 401);
-
         $request->validate(['producto_id' => 'required|exists:productos,id']);
 
-        $existing = Wishlist::where('firebase_uid', $uid)
+        $userId = $request->user()->id;
+
+        $existing = Wishlist::where('user_id', $userId)
             ->where('producto_id', $request->producto_id)
             ->first();
 
@@ -54,8 +47,8 @@ class WishlistController extends Controller
         }
 
         Wishlist::create([
-            'firebase_uid' => $uid,
-            'producto_id'  => $request->producto_id,
+            'user_id'    => $userId,
+            'producto_id' => $request->producto_id,
         ]);
 
         return response()->json(['action' => 'added']);
@@ -63,10 +56,7 @@ class WishlistController extends Controller
 
     public function check(Request $request, int $productoId)
     {
-        $uid = $this->getUid($request);
-        if (!$uid) return response()->json(['in_wishlist' => false]);
-
-        $inWishlist = Wishlist::where('firebase_uid', $uid)
+        $inWishlist = Wishlist::where('user_id', $request->user()->id)
             ->where('producto_id', $productoId)
             ->exists();
 
@@ -75,10 +65,7 @@ class WishlistController extends Controller
 
     public function remove(Request $request, int $productoId)
     {
-        $uid = $this->getUid($request);
-        if (!$uid) return response()->json(['error' => 'No autenticado'], 401);
-
-        Wishlist::where('firebase_uid', $uid)
+        Wishlist::where('user_id', $request->user()->id)
             ->where('producto_id', $productoId)
             ->delete();
 

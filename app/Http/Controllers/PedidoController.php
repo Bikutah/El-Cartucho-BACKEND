@@ -274,7 +274,7 @@ class PedidoController extends Controller
             'productos.*.cantidad' => 'required|integer|min:1',
         ]);
 
-        $firebaseUid = $request->header('X-Firebase-UID', 'anonimo');
+        $user = $request->user();
 
         DB::beginTransaction();
 
@@ -286,10 +286,10 @@ class PedidoController extends Controller
             $expiracion = now()->addHours(config('mercadopago.expiration_hours', 72));
 
             $pedido = Pedido::create([
-                'firebase_uid' => $firebaseUid,
-                'estado' => 'pendiente',
-                'total' => 0,
-                'expira_at' => $expiracion,
+                'firebase_uid' => $user->firebase_uid,
+                'estado'       => 'pendiente',
+                'total'        => 0,
+                'expira_at'    => $expiracion,
             ]);
 
             foreach ($request->productos as $item) {
@@ -420,25 +420,24 @@ class PedidoController extends Controller
 
     public function misPedidos(Request $request)
     {
-        $uid = $request->header('X-Firebase-UID');
-        if (!$uid) return response()->json(['error' => 'No autenticado'], 401);
+        $user = $request->user();
 
         $pedidos = Pedido::with(['detalles.producto.imagenes'])
-            ->where('firebase_uid', $uid)
+            ->where('firebase_uid', $user->firebase_uid)
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($pedido) {
                 return [
-                    'id'          => $pedido->id,
-                    'estado'      => $pedido->estado,
-                    'total'       => (float) $pedido->total,
-                    'created_at'  => $pedido->created_at,
-                    'productos'   => $pedido->detalles->map(function ($d) {
+                    'id'         => $pedido->id,
+                    'estado'     => $pedido->estado,
+                    'total'      => (float) $pedido->total,
+                    'created_at' => $pedido->created_at,
+                    'productos'  => $pedido->detalles->map(function ($d) {
                         return [
-                            'nombre'         => optional($d->producto)->nombre ?? 'Producto eliminado',
-                            'cantidad'       => $d->cantidad,
-                            'precio_unitario'=> (float) $d->precio_unitario,
-                            'image'          => optional($d->producto?->imagenes->first())->url,
+                            'nombre'          => optional($d->producto)->nombre ?? 'Producto eliminado',
+                            'cantidad'        => $d->cantidad,
+                            'precio_unitario' => (float) $d->precio_unitario,
+                            'image'           => optional($d->producto?->imagenes->first())->url,
                         ];
                     }),
                 ];

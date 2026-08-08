@@ -8,10 +8,15 @@ class Wishlist extends Model
 {
     protected $table = 'wishlist';
 
-    protected $fillable = ['firebase_uid', 'producto_id'];
+    protected $fillable = ['user_id', 'firebase_uid', 'producto_id'];
 
     public function producto()
     {
         return $this->belongsTo(Producto::class)->with('imagenes');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }
