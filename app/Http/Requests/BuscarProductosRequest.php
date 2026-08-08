@@ -34,6 +34,7 @@ class BuscarProductosRequest extends FormRequest
             'precio_max' => 'nullable|numeric|gte:precio_min',
             'orden' => ['nullable', 'string', Rule::in(['nombre', 'precio', 'created_at'])],
             'dir' => ['nullable', 'string', Rule::in(['asc', 'desc'])],
+            'disponibilidad' => ['nullable', 'string', Rule::in(['con_stock', 'sin_stock'])],
             'page' => 'nullable|integer|min:1',
             'per_page' => 'nullable|integer|between:1,48',
         ];
@@ -63,6 +64,7 @@ class BuscarProductosRequest extends FormRequest
             'precio_max.gte' => 'El precio máximo debe ser mayor o igual al precio mínimo.',
             'orden.in' => 'El campo de ordenamiento no es válido.',
             'dir.in' => 'La dirección de ordenamiento debe ser asc o desc.',
+            'disponibilidad.in' => 'La opción de disponibilidad no es válida.',
             'page.integer' => 'La página debe ser un número entero.',
             'page.min' => 'La página debe ser al menos 1.',
             'per_page.integer' => 'La cantidad de elementos por página debe ser un entero.',

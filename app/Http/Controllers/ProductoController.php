@@ -345,6 +345,14 @@ class ProductoController extends Controller
             $query->where('precioUnitario', '<=', $validated['precio_max']);
         }
 
+        if (!empty($validated['disponibilidad'])) {
+            if ($validated['disponibilidad'] === 'con_stock') {
+                $query->where('stock', '>', 0);
+            } elseif ($validated['disponibilidad'] === 'sin_stock') {
+                $query->where('stock', '<=', 0);
+            }
+        }
+
         $orden = $validated['orden'] ?? 'created_at';
         $columnMap = [
             'nombre' => 'nombre',

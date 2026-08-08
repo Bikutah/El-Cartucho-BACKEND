@@ -47,7 +47,7 @@ class WishlistController extends Controller
         }
 
         Wishlist::create([
-            'user_id'    => $userId,
+            'user_id'     => $userId,
             'producto_id' => $request->producto_id,
         ]);
 
