@@ -12,6 +12,7 @@ return [
         'http://localhost:5175',
         'https://elcartucho-git-dev-agustinbowens-projects.vercel.app',
         'https://elcartucho.vercel.app',
+        'https://elcartucho-git-main-agustinbowens-projects.vercel.app'
     ],
 
     'allowed_origins_patterns' => [],

@@ -9,7 +9,18 @@ class Pedido extends Model
 {
     use HasFactory;
 
-    protected $fillable = ['firebase_uid', 'estado', 'mercado_pago_id', 'total', 'expira_at'];
+    protected $fillable = [
+        'user_id',
+        'firebase_uid',
+        'email',
+        'domicilio',
+        'ciudad',
+        'codigo_postal',
+        'estado',
+        'mercado_pago_id',
+        'total',
+        'expira_at',
+    ];
 
     protected $casts = [
         'expira_at' => 'datetime',
@@ -18,5 +29,10 @@ class Pedido extends Model
     public function detalles()
     {
         return $this->hasMany(DetallePedido::class);
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
     }
 }

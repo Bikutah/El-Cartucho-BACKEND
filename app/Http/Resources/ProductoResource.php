@@ -28,6 +28,7 @@ class ProductoResource extends JsonResource
                 ];
             })->values()->toArray(),
             'subcategorias' => $this->subcategorias->pluck('nombre'),
+            'stock' => $this->stock,
         ];
     }
 

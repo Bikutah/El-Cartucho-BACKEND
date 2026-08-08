@@ -14,6 +14,12 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->trustProxies(at: '*');
+
+        // Verificación de ID token de Firebase (firma + claims)
+        $middleware->alias([
+            'firebase.token' => \App\Http\Middleware\VerificarTokenFirebase::class,
+            'firebase.user'  => \App\Http\Middleware\RequerirUsuarioLocal::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions) {
         //

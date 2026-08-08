@@ -21,6 +21,11 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'firebase_uid',
+        'apellido',
+        'domicilio',
+        'ciudad',
+        'codigo_postal',
     ];
 
     /**
@@ -44,5 +49,10 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
         ];
+    }
+
+    public function pedidos()
+    {
+        return $this->hasMany(Pedido::class);
     }
 }

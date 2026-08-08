@@ -73,10 +73,49 @@
             <h4 class="detail-title">Información del Cliente</h4>
         </div>
         <div class="detail-content">
-            <div class="info-row">
-                <span class="info-label">ID de Usuario:</span>
-                <span class="info-value customer-uid">{{ $pedido->firebase_uid }}</span>
-            </div>
+            @if($pedido->user)
+                <div class="info-row">
+                    <span class="info-label">Nombre:</span>
+                    <span class="info-value">
+                        <a href="{{ route('clientes.show', $pedido->user->id) }}" class="text-decoration-none fw-bold text-primary">
+                            <i class="fas fa-user me-1"></i>{{ $pedido->user->name }} {{ $pedido->user->apellido }}
+                        </a>
+                    </span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Email de contacto:</span>
+                    <span class="info-value">{{ $pedido->email ?? $pedido->user->email }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Domicilio de envío:</span>
+                    <span class="info-value">{{ $pedido->domicilio ?? $pedido->user->domicilio ?? '-' }}</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">Ciudad / CP:</span>
+                    <span class="info-value">{{ $pedido->ciudad ?? $pedido->user->ciudad ?? '-' }} (CP {{ $pedido->codigo_postal ?? $pedido->user->codigo_postal ?? '-' }})</span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">UID de Firebase:</span>
+                    <span class="info-value customer-uid">{{ $pedido->firebase_uid }}</span>
+                </div>
+            @else
+                <div class="info-row">
+                    <span class="info-label">Cliente:</span>
+                    <span class="info-value">
+                        <span class="status-badge status-unknown"><i class="fas fa-user-slash me-1"></i>Sin cliente asociado</span>
+                    </span>
+                </div>
+                @if($pedido->email || $pedido->domicilio)
+                <div class="info-row">
+                    <span class="info-label">Envío:</span>
+                    <span class="info-value">{{ $pedido->domicilio }}, {{ $pedido->ciudad }} (CP {{ $pedido->codigo_postal }})</span>
+                </div>
+                @endif
+                <div class="info-row">
+                    <span class="info-label">UID de Firebase:</span>
+                    <span class="info-value customer-uid">{{ $pedido->firebase_uid }}</span>
+                </div>
+            @endif
         </div>
     </div>
 
