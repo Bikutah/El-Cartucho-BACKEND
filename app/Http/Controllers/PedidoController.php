@@ -274,7 +274,7 @@ class PedidoController extends Controller
             'productos.*.cantidad' => 'required|integer|min:1',
         ]);
 
-        $firebaseUid = 'Max Verstappen';
+        $firebaseUid = $request->header('X-Firebase-UID', 'anonimo');
 
         DB::beginTransaction();
 
@@ -418,5 +418,32 @@ class PedidoController extends Controller
         return $response->json();
     }
 
+    public function misPedidos(Request $request)
+    {
+        $uid = $request->header('X-Firebase-UID');
+        if (!$uid) return response()->json(['error' => 'No autenticado'], 401);
 
+        $pedidos = Pedido::with(['detalles.producto.imagenes'])
+            ->where('firebase_uid', $uid)
+            ->orderByDesc('created_at')
+            ->get()
+            ->map(function ($pedido) {
+                return [
+                    'id'          => $pedido->id,
+                    'estado'      => $pedido->estado,
+                    'total'       => (float) $pedido->total,
+                    'created_at'  => $pedido->created_at,
+                    'productos'   => $pedido->detalles->map(function ($d) {
+                        return [
+                            'nombre'         => optional($d->producto)->nombre ?? 'Producto eliminado',
+                            'cantidad'       => $d->cantidad,
+                            'precio_unitario'=> (float) $d->precio_unitario,
+                            'image'          => optional($d->producto?->imagenes->first())->url,
+                        ];
+                    }),
+                ];
+            });
+
+        return response()->json($pedidos);
+    }
 }
