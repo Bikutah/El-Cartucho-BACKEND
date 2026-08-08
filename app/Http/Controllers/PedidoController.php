@@ -271,9 +271,13 @@ class PedidoController extends Controller
     public function store(Request $request)
     {
         $request->validate([
-            'productos' => 'required|array|min:1',
+            'productos'               => 'required|array|min:1',
             'productos.*.producto_id' => 'required|exists:productos,id',
-            'productos.*.cantidad' => 'required|integer|min:1',
+            'productos.*.cantidad'    => 'required|integer|min:1',
+            'email'                   => 'nullable|email|max:255',
+            'codigo_postal'           => 'nullable|string|regex:/^\d{4}$/',
+            'domicilio'               => 'nullable|string|max:255',
+            'ciudad'                  => 'nullable|string|max:255',
         ]);
 
         $user = $request->user();
@@ -288,10 +292,15 @@ class PedidoController extends Controller
             $expiracion = now()->addHours(config('mercadopago.expiration_hours', 72));
 
             $pedido = Pedido::create([
-                'firebase_uid' => $user->firebase_uid,
-                'estado'       => 'pendiente',
-                'total'        => 0,
-                'expira_at'    => $expiracion,
+                'user_id'       => $user->id,
+                'firebase_uid'  => $user->firebase_uid,
+                'email'         => $request->input('email', $user->email),
+                'domicilio'     => $request->input('domicilio', $user->domicilio),
+                'ciudad'        => $request->input('ciudad', $user->ciudad),
+                'codigo_postal' => $request->input('codigo_postal', $user->codigo_postal ?? '1234'),
+                'estado'        => 'pendiente',
+                'total'         => 0,
+                'expira_at'     => $expiracion,
             ]);
 
             foreach ($request->productos as $item) {
