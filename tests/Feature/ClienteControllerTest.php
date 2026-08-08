@@ -180,4 +180,41 @@ class ClienteControllerTest extends TestCase
         $respShow->assertSee('Sin cliente asociado');
         $respShow->assertSee('Max Verstappen');
     }
+
+    public function test_desempate_ultimo_pedido_mismo_timestamp_id_mayor_prevalece(): void
+    {
+        $user = User::factory()->create([
+            'name'         => 'Empate',
+            'apellido'     => 'Tester',
+            'firebase_uid' => 'uid-empate',
+        ]);
+
+        $now = now()->subMinutes(10);
+
+        // Primer pedido (ID menor): estado 'pendiente'
+        $p1 = new Pedido(['user_id' => $user->id, 'firebase_uid' => $user->firebase_uid, 'estado' => 'pendiente', 'total' => 100, 'expira_at' => now()->addHours(72)]);
+        $p1->created_at = $now;
+        $p1->save();
+
+        // Segundo pedido (ID mayor): estado 'pagado', mismo created_at
+        $p2 = new Pedido(['user_id' => $user->id, 'firebase_uid' => $user->firebase_uid, 'estado' => 'pagado', 'total' => 200, 'expira_at' => now()->addHours(72)]);
+        $p2->created_at = $now;
+        $p2->save();
+
+        // El listado general debe mostrar 'pagado' (el de mayor ID)
+        $resp = $this->get('/clientes');
+        $resp->assertStatus(200);
+        $resp->assertSee('Empate Tester');
+        $resp->assertSee('Pagado');
+
+        // El filtro por ultimo_estado=pagado debe incluir a Empate Tester
+        $respPagado = $this->get('/clientes?ultimo_estado=pagado');
+        $respPagado->assertStatus(200);
+        $respPagado->assertSee('Empate Tester');
+
+        // El filtro por ultimo_estado=pendiente NO debe incluir a Empate Tester
+        $respPendiente = $this->get('/clientes?ultimo_estado=pendiente');
+        $respPendiente->assertStatus(200);
+        $respPendiente->assertDontSee('Empate Tester');
+    }
 }
