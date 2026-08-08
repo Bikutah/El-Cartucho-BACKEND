@@ -17,23 +17,30 @@ class PedidoController extends Controller
     public function index(Request $request)
     {
         $request->validate([
-            'id' => 'nullable|integer|min:1',
-            'firebase_uid' => 'nullable|string|max:100',
-            'estado' => 'nullable|string|in:pendiente,pagado,cancelado',
+            'id'        => 'nullable|integer|min:1',
+            'cliente'   => 'nullable|string|max:255',
+            'estado'    => 'nullable|string|in:pendiente,pagado,cancelado',
             'total_min' => 'nullable|numeric|min:0',
             'total_max' => 'nullable|numeric|min:0|gte:total_min',
         ]);
 
         session(['listado_url.pedidos' => url()->full()]);
-        $query = Pedido::with(['detalles.producto']);
+        $query = Pedido::with(['user', 'detalles.producto']);
 
         // Aplicar filtros
         if ($request->filled('id')) {
             $query->where('id', $request->input('id'));
         }
 
-        if ($request->filled('firebase_uid')) {
-            $query->where('firebase_uid', 'like', '%' . $request->input('firebase_uid') . '%');
+        if ($request->filled('cliente')) {
+            $val = $request->input('cliente');
+            $query->where(function ($q) use ($val) {
+                $q->whereHas('user', function ($uq) use ($val) {
+                    $uq->where('name', 'like', "%{$val}%")
+                       ->orWhere('apellido', 'like', "%{$val}%")
+                       ->orWhere('email', 'like', "%{$val}%");
+                })->orWhere('firebase_uid', 'like', "%{$val}%");
+            });
         }
 
         if ($request->filled('estado')) {
@@ -54,14 +61,14 @@ class PedidoController extends Controller
         // Filtros para la vista
         $filtros = [
             ['name' => 'id', 'placeholder' => 'Buscar por ID del pedido'],
-            ['name' => 'firebase_uid', 'placeholder' => 'UID de Usuario'],
+            ['name' => 'cliente', 'placeholder' => 'Buscar por nombre, email o UID'],
             [
                 'name' => 'estado',
                 'placeholder' => 'Filtrar por estado',
                 'type' => 'select',
                 'options' => [
                     'pendiente' => 'Pendiente',
-                    'pagado' => 'Pagado',
+                    'pagado'    => 'Pagado',
                     'cancelado' => 'Cancelado'
                 ]
             ],
@@ -73,15 +80,9 @@ class PedidoController extends Controller
         $renderFila = function ($pedido) {
             $getEstadoBadge = function ($estado) {
                 $badges = [
-                    'pendiente' => '<span class="status-badge status-pending">
-                    <i class="fas fa-clock"></i><span>Pendiente</span>
-                </span>',
-                    'pagado' => '<span class="status-badge status-paid">
-                    <i class="fas fa-check-circle"></i><span>Pagado</span>
-                </span>',
-                    'cancelado' => '<span class="status-badge status-cancelled">
-                    <i class="fas fa-times-circle"></i><span>Cancelado</span>
-                </span>'
+                    'pendiente' => '<span class="status-badge status-pending"><i class="fas fa-clock"></i><span>Pendiente</span></span>',
+                    'pagado'    => '<span class="status-badge status-paid"><i class="fas fa-check-circle"></i><span>Pagado</span></span>',
+                    'cancelado' => '<span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i><span>Cancelado</span></span>'
                 ];
                 return $badges[$estado] ?? '<span class="status-badge status-unknown">Desconocido</span>';
             };
@@ -98,6 +99,13 @@ class PedidoController extends Controller
             $totalProductos = $productosResumen->sum('cantidad');
             $primerProducto = $productosResumen->first();
 
+            if ($pedido->user) {
+                $nombreCliente = e($pedido->user->name . ($pedido->user->apellido ? ' ' . $pedido->user->apellido : ''));
+                $clienteHtml = '<a href="' . route('clientes.show', $pedido->user->id) . '" class="text-decoration-none fw-bold text-primary"><i class="fas fa-user me-1"></i>' . $nombreCliente . '</a>';
+            } else {
+                $clienteHtml = '<span class="status-badge status-unknown" data-bs-toggle="tooltip" title="UID: ' . e($pedido->firebase_uid) . '"><i class="fas fa-user-slash me-1"></i>Sin cliente asociado</span>';
+            }
+
             return '
             <div class="table-cell" data-label="ID">
                 <span class="table-cell-label">ID:</span>
@@ -109,12 +117,7 @@ class PedidoController extends Controller
                 <span class="table-cell-label">Cliente:</span>
                 <div class="customer-info">
                     <div class="customer-details">
-                        <span class="customer-uid truncate-15" 
-                              data-bs-toggle="tooltip" 
-                              data-bs-placement="top" 
-                              title="' . e($pedido->firebase_uid) . '">
-                            ' . e(Str::limit($pedido->firebase_uid, 12)) . '
-                        </span>
+                        ' . $clienteHtml . '
                     </div>
                 </div>
             </div>
@@ -178,12 +181,11 @@ class PedidoController extends Controller
         ]);
     }
 
-
-
     public function show($id)
     {
         try {
             $pedido = Pedido::with([
+                'user',
                 'detalles' => function ($query) {
                     $query->with(['producto' => function ($query) {
                         $query->with('imagenes');
