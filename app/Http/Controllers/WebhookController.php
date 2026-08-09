@@ -193,6 +193,23 @@ class WebhookController extends Controller
         $calculatedSignature = hash_hmac('sha256', $manifest, $webhookSecret);
 
         // Comparación segura contra ataques de tiempo
-        return hash_equals($calculatedSignature, $v1);
+        $isValid = hash_equals($calculatedSignature, $v1);
+
+        if (!$isValid) {
+            Log::warning('Webhook Signature Mismatch Details (DIAGNOSIS)', [
+                'data_id_used' => $dataId,
+                'ts_used' => $ts,
+                'request_id_used' => $requestId,
+                'manifest_string' => $manifest,
+                'calculated_hash' => $calculatedSignature,
+                'received_v1' => $v1,
+                'query_string_crudo' => $request->getQueryString(),
+                'query_completo' => $request->query(),
+                'body_data_id' => $request->input('data.id'),
+                'header_signature' => $signatureHeader,
+            ]);
+        }
+
+        return $isValid;
     }
 }
