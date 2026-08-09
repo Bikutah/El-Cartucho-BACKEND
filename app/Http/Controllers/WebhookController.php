@@ -17,6 +17,15 @@ class WebhookController extends Controller
         // Log del request recibido
         Log::info('Webhook MercadoPago recibido:', $request->all());
 
+        // Early exit para notificaciones que no son pagos: no requieren firma ni procesamiento
+        $topic = $request->query('topic') ?? $request->query('type')
+              ?? $request->input('topic') ?? $request->input('type');
+
+        if ($topic === 'merchant_order') {
+            Log::info('Webhook: merchant_order ignorado', ['id' => $request->query('id')]);
+            return response()->json(['message' => 'Evento ignorado'], 200);
+        }
+
         // 1. Validar la firma del Webhook (HMAC-SHA256)
         if (!$this->isSignatureValid($request)) {
             Log::warning('Intento de acceso no autorizado al webhook de MercadoPago (firma inválida)', [
@@ -197,7 +206,7 @@ class WebhookController extends Controller
         $isValid = hash_equals($calculatedSignature, $v1);
 
         if (!$isValid) {
-            Log::warning('Webhook Signature Mismatch Details (DIAGNOSIS)', [
+            Log::error('Webhook Signature Mismatch Details (DIAGNOSIS)', [
                 'data_id_used' => $dataId,
                 'ts_used' => $ts,
                 'request_id_used' => $requestId,
