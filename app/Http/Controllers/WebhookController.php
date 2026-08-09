@@ -140,7 +140,8 @@ class WebhookController extends Controller
     {
         $signatureHeader = $request->header('x-signature');
         $requestId = $request->header('x-request-id');
-        $webhookSecret = config('mercadopago.webhook_secret_token');
+        $rawSecret = config('mercadopago.webhook_secret_token');
+        $webhookSecret = is_string($rawSecret) ? trim($rawSecret) : '';
 
         // Falla cerrado: si no hay secreto configurado, rechazar
         if (!$webhookSecret) {
@@ -175,10 +176,11 @@ class WebhookController extends Controller
             return false;
         }
 
-        // Obtener data.id (payment ID) de la consulta (query parameter)
+        // Obtener data.id (payment ID) de la consulta (query parameter) o fallback al body
         $dataId = $request->query('data_id')
                ?? $request->query('data.id')
-               ?? $request->query('id');
+               ?? $request->query('id')
+               ?? data_get($request->all(), 'data.id');
 
         if (!$dataId) {
             return false;
@@ -192,6 +194,24 @@ class WebhookController extends Controller
         $calculatedSignature = hash_hmac('sha256', $manifest, $webhookSecret);
 
         // Comparación segura contra ataques de tiempo
-        return hash_equals($calculatedSignature, $v1);
+        $isValid = hash_equals($calculatedSignature, $v1);
+
+        if (!$isValid) {
+            Log::warning('Webhook Signature Mismatch Details (DIAGNOSIS)', [
+                'data_id_used' => $dataId,
+                'ts_used' => $ts,
+                'request_id_used' => $requestId,
+                'manifest_string' => $manifest,
+                'calculated_hash' => $calculatedSignature,
+                'received_v1' => $v1,
+                'query_string_crudo' => $request->getQueryString(),
+                'query_completo' => $request->query(),
+                'secret_length' => strlen((string) $rawSecret),
+                'secret_tiene_espacios' => (string) $rawSecret !== (string) $webhookSecret,
+                'header_signature' => $signatureHeader,
+            ]);
+        }
+
+        return $isValid;
     }
 }
