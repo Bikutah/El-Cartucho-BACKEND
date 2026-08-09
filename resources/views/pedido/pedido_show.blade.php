@@ -142,14 +142,16 @@
                 <span class="info-label">Última Actualización:</span>
                 <span class="info-value">{{ $pedido->updated_at->format('d/m/Y H:i') }}</span>
             </div>
-            @if($pedido->mercado_pago_id)
             <div class="info-row">
                 <span class="info-label">ID MercadoPago:</span>
                 <span class="info-value">
-                    <span class="mp-id">{{ $pedido->mercado_pago_id }}</span>
+                    @if($pedido->mercado_pago_id)
+                        <span class="mp-id">{{ $pedido->mercado_pago_id }}</span>
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
                 </span>
             </div>
-            @endif
         </div>
     </div>
 
