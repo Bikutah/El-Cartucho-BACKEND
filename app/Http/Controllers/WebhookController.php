@@ -175,11 +175,10 @@ class WebhookController extends Controller
             return false;
         }
 
-        // Obtener data.id (payment ID) de la consulta (query parameter) o inputs
-        $dataId = $request->query('data.id') ?? $request->query('id');
-        if (!$dataId) {
-            $dataId = $request->input('data.id') ?? $request->input('id');
-        }
+        // Obtener data.id (payment ID) de la consulta (query parameter)
+        $dataId = $request->query('data_id')
+               ?? $request->query('data.id')
+               ?? $request->query('id');
 
         if (!$dataId) {
             return false;
@@ -193,23 +192,6 @@ class WebhookController extends Controller
         $calculatedSignature = hash_hmac('sha256', $manifest, $webhookSecret);
 
         // Comparación segura contra ataques de tiempo
-        $isValid = hash_equals($calculatedSignature, $v1);
-
-        if (!$isValid) {
-            Log::warning('Webhook Signature Mismatch Details (DIAGNOSIS)', [
-                'data_id_used' => $dataId,
-                'ts_used' => $ts,
-                'request_id_used' => $requestId,
-                'manifest_string' => $manifest,
-                'calculated_hash' => $calculatedSignature,
-                'received_v1' => $v1,
-                'query_string_crudo' => $request->getQueryString(),
-                'query_completo' => $request->query(),
-                'body_data_id' => $request->input('data.id'),
-                'header_signature' => $signatureHeader,
-            ]);
-        }
-
-        return $isValid;
+        return hash_equals($calculatedSignature, $v1);
     }
 }

@@ -342,4 +342,91 @@ class WebhookTest extends TestCase
         // Debe reponerse stock: 10 + 4 = 14
         $this->assertEquals(14, $producto->fresh()->stock);
     }
+
+    /** @test */
+    public function webhook_validates_signature_with_data_id_and_type_payment()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create(['estado' => 'pendiente']);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 1,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $paymentId = '172827232822';
+        $requestId = 'req_id_data_id';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentId, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId}" => Http::response([
+                'status' => 'approved',
+                'external_reference' => $pedido->id
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId . '&type=payment', [
+            'data' => ['id' => $paymentId]
+        ], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('pagado', $pedido->fresh()->estado);
+    }
+
+    /** @test */
+    public function webhook_validates_signature_with_id_and_topic_payment()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create(['estado' => 'pendiente']);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 1,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $paymentId = '172827232822';
+        $requestId = 'req_id_topic_payment';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentId, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId}" => Http::response([
+                'status' => 'approved',
+                'external_reference' => $pedido->id
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?id=' . $paymentId . '&topic=payment', [], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('pagado', $pedido->fresh()->estado);
+    }
+
+    /** @test */
+    public function webhook_ignores_merchant_order_topic_with_200_status()
+    {
+        $merchantOrderId = '43454527822';
+        $requestId = 'req_id_merchant_order';
+        $ts = time();
+        $signature = $this->getSignatureHeader($merchantOrderId, $requestId, $ts);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?id=' . $merchantOrderId . '&topic=merchant_order', [], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Evento ignorado']);
+    }
 }
