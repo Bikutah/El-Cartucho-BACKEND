@@ -139,7 +139,7 @@ class WebhookController extends Controller
     private function isSignatureValid(Request $request): bool
     {
         $signatureHeader = $request->header('x-signature');
-        $requestId = $request->header('x-request-id');
+        $requestId = $request->header('x-request-id') ?? '';
         $rawSecret = config('mercadopago.webhook_secret_token');
         $webhookSecret = is_string($rawSecret) ? trim($rawSecret) : '';
 
@@ -149,7 +149,7 @@ class WebhookController extends Controller
             return false;
         }
 
-        if (!$signatureHeader || !$requestId) {
+        if (!$signatureHeader) {
             return false;
         }
 
