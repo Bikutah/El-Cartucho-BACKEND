@@ -18,6 +18,7 @@ class Pedido extends Model
         'codigo_postal',
         'estado',
         'mercado_pago_id',
+        'mercado_pago_preference_id',
         'total',
         'expira_at',
     ];

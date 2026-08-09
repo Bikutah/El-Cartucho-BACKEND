@@ -386,10 +386,15 @@ class PedidoController extends Controller
             ], 500);
         }
 
+        // Guardamos el preference_id en el pedido para trazabilidad
+        $pedido->mercado_pago_preference_id = $preference['id'];
+        $pedido->save();
+
         return response()->json([
-            'pedido_id' => $pedido->id,
-            'mercado_pago_url' => $preference['init_point'],
-            'mercado_pago_id' => $preference['id']
+            'pedido_id'              => $pedido->id,
+            'mercado_pago_url'       => $preference['init_point'],
+            'mercado_pago_id'        => $preference['id'],
+            'mercado_pago_preference_id' => $preference['id'],
         ], 201);
     }
 

@@ -143,7 +143,17 @@
                 <span class="info-value">{{ $pedido->updated_at->format('d/m/Y H:i') }}</span>
             </div>
             <div class="info-row">
-                <span class="info-label">ID MercadoPago:</span>
+                <span class="info-label">Preferencia MP:</span>
+                <span class="info-value">
+                    @if($pedido->mercado_pago_preference_id)
+                        <span class="mp-id">{{ $pedido->mercado_pago_preference_id }}</span>
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
+                </span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">Payment ID MP:</span>
                 <span class="info-value">
                     @if($pedido->mercado_pago_id)
                         <span class="mp-id">{{ $pedido->mercado_pago_id }}</span>
