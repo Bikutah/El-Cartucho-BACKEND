@@ -254,4 +254,43 @@ class PedidoControllerTest extends TestCase
         $respInvalido = $this->getJson('/ed/producto/listar?disponibilidad=invalido');
         $respInvalido->assertStatus(422);
     }
+
+    /** @test */
+    public function order_detail_view_shows_payment_id_and_preference_id_when_present()
+    {
+        $admin = User::factory()->create(['name' => 'Admin Test']);
+        $pedido = \App\Models\Pedido::factory()->create([
+            'user_id' => $this->user->id,
+            'estado' => 'pagado',
+            'mercado_pago_id' => '172836453442',
+            'mercado_pago_preference_id' => '2459460394-6b357e0c-fd7b-45fc-87b1-1234567890ab',
+        ]);
+
+        $response = $this->actingAs($admin)->get("/pedidos/{$pedido->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('172836453442');
+        $response->assertSee('2459460394-6b357e0c-fd7b-45fc-87b1-1234567890ab');
+        $response->assertSee('(Referencia externa MP)');
+        $response->assertSee('aria-label="Copiar Payment ID"', false);
+        $response->assertSee('aria-label="Copiar Preference ID"', false);
+    }
+
+    /** @test */
+    public function order_detail_view_without_payment_id_shows_neutral_text_and_does_not_break()
+    {
+        $admin = User::factory()->create(['name' => 'Admin Test 2']);
+        $pedido = \App\Models\Pedido::factory()->create([
+            'user_id' => $this->user->id,
+            'estado' => 'pendiente',
+            'mercado_pago_id' => null,
+            'mercado_pago_preference_id' => null,
+        ]);
+
+        $response = $this->actingAs($admin)->get("/pedidos/{$pedido->id}");
+
+        $response->assertStatus(200);
+        $response->assertSee('Sin pago registrado');
+        $response->assertSee('(Referencia externa MP)');
+    }
 }

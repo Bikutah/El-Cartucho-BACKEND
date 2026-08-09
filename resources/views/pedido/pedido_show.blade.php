@@ -132,6 +132,7 @@
                 <span class="info-label">Número de Pedido:</span>
                 <span class="info-value">
                     <span class="order-number">#{{ str_pad($pedido->id, 4, '0', STR_PAD_LEFT) }}</span>
+                    <small class="text-muted d-block fw-normal">(Referencia externa MP)</small>
                 </span>
             </div>
             <div class="info-row">
@@ -144,9 +145,14 @@
             </div>
             <div class="info-row">
                 <span class="info-label">Preferencia MP:</span>
-                <span class="info-value">
+                <span class="info-value text-break">
                     @if($pedido->mercado_pago_preference_id)
-                        <span class="mp-id">{{ $pedido->mercado_pago_preference_id }}</span>
+                        <span class="d-inline-flex align-items-center gap-1 flex-wrap justify-content-end">
+                            <span class="mp-id text-break">{{ $pedido->mercado_pago_preference_id }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary p-1 border-0" aria-label="Copiar Preference ID" onclick="copyToClipboard('{{ $pedido->mercado_pago_preference_id }}', this)" title="Copiar Preference ID">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </span>
                     @else
                         <span class="text-muted">—</span>
                     @endif
@@ -154,11 +160,16 @@
             </div>
             <div class="info-row">
                 <span class="info-label">Payment ID MP:</span>
-                <span class="info-value">
+                <span class="info-value text-break">
                     @if($pedido->mercado_pago_id)
-                        <span class="mp-id">{{ $pedido->mercado_pago_id }}</span>
+                        <span class="d-inline-flex align-items-center gap-1 flex-wrap justify-content-end">
+                            <span class="mp-id text-break">{{ $pedido->mercado_pago_id }}</span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary p-1 border-0" aria-label="Copiar Payment ID" onclick="copyToClipboard('{{ $pedido->mercado_pago_id }}', this)" title="Copiar Payment ID">
+                                <i class="far fa-copy"></i>
+                            </button>
+                        </span>
                     @else
-                        <span class="text-muted">—</span>
+                        <span class="text-muted">Sin pago registrado</span>
                     @endif
                 </span>
             </div>
@@ -317,3 +328,40 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+function copyToClipboard(text, button) {
+    if (!text) return;
+    const icon = button ? button.querySelector('i') : null;
+    const originalClass = icon ? icon.className : '';
+
+    function showSuccess() {
+        if (icon) {
+            icon.className = 'fas fa-check text-success';
+            setTimeout(function() {
+                icon.className = originalClass;
+            }, 2000);
+        }
+    }
+
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(showSuccess).catch(function() {
+            fallbackCopy(text);
+        });
+    } else {
+        fallbackCopy(text);
+    }
+
+    function fallbackCopy(str) {
+        const el = document.createElement('textarea');
+        el.value = str;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        showSuccess();
+    }
+}
+</script>
+@endpush
