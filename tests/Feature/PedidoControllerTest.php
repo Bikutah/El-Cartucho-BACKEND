@@ -23,9 +23,8 @@ class PedidoControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Config::set('mercadopago.access_token', 'test_access_token');
-        Config::set('mercadopago.front_url', 'http://localhost:3000');
-        Config::set('mercadopago.notification_url', 'http://localhost/webhook');
+        Config::set('services.mercadopago.access_token', 'test_access_token');
+        Config::set('services.mercadopago.front_url', 'http://localhost:3000');
         Config::set('mercadopago.expiration_hours', 72);
 
         $openSslConfig = [
@@ -292,5 +291,33 @@ class PedidoControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Sin pago registrado');
         $response->assertSee('(Referencia externa MP)');
+    }
+
+    /** @test */
+    public function test_6_created_preference_payload_does_not_contain_notification_url_key()
+    {
+        $producto = Producto::factory()->create(['stock' => 5, 'precioUnitario' => 100.0]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'productos' => [
+                    [
+                        'producto_id' => $producto->id,
+                        'cantidad'    => 1,
+                    ]
+                ],
+                'email'         => 'test@ejemplo.com',
+                'codigo_postal' => '1234',
+            ]);
+
+        $response->assertStatus(201);
+
+        Http::assertSent(function ($request) {
+            if ($request->url() === 'https://api.mercadopago.com/checkout/preferences') {
+                $data = json_decode($request->body(), true);
+                return !array_key_exists('notification_url', $data);
+            }
+            return true;
+        });
     }
 }

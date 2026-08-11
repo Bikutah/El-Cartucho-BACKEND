@@ -411,16 +411,15 @@ class PedidoController extends Controller
             ];
         }
 
-        $response = Http::withToken(config('mercadopago.access_token'))
+        $response = Http::withToken(config('services.mercadopago.access_token'))
             ->post('https://api.mercadopago.com/checkout/preferences', [
                 'items' => $items,
                 'external_reference' => (string)$pedido->id,
                 'back_urls' => [
-                    'success' => config('mercadopago.front_url') . '/pago/success',
-                    'failure' => config('mercadopago.front_url') . '/pago/failure',
-                    'pending' => config('mercadopago.front_url') . '/pago/pending',
+                    'success' => config('services.mercadopago.front_url') . '/pago/success',
+                    'failure' => config('services.mercadopago.front_url') . '/pago/failure',
+                    'pending' => config('services.mercadopago.front_url') . '/pago/pending',
                 ],
-                'notification_url' => config('mercadopago.notification_url'),
                 'auto_return' => 'approved',
                 'statement_descriptor' => 'ELCARTUCHO',
                 'expires' => true,

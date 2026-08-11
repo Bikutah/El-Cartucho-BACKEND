@@ -14,89 +14,117 @@ class WebhookController extends Controller
 {
     public function handle(Request $request)
     {
-        // Log del request recibido
         Log::info('Webhook MercadoPago recibido:', $request->all());
 
-        // Early exit para notificaciones que no son pagos: no requieren firma ni procesamiento
-        $topic = $request->query('topic') ?? $request->query('type')
-              ?? $request->input('topic') ?? $request->input('type');
+        // 1. Leer data_id exclusivamente desde query params (?data_id=X)
+        $dataId = $request->query('data_id');
+        $signatureHeader = $request->header('x-signature');
 
-        if ($topic === 'merchant_order') {
-            Log::info('Webhook: merchant_order ignorado', ['id' => $request->query('id')]);
-            return response()->json(['message' => 'Evento ignorado'], 200);
+        // Rule 2: Si falta data_id o x-signature -> responder 200 (notificación legacy o sin firma)
+        if (!$dataId || !$signatureHeader) {
+            return response()->json(['message' => 'Notificación ignorada: falta data_id o x-signature'], 200);
         }
 
-        // 1. Validar la firma del Webhook (HMAC-SHA256)
-        if (!$this->isSignatureValid($request)) {
-            Log::warning('Intento de acceso no autorizado al webhook de MercadoPago (firma inválida)', [
-                'ip' => $request->ip(),
-                'headers' => $request->headers->all(),
-                'query' => $request->query(),
+        // 2. Validar la firma del Webhook (HMAC-SHA256)
+        if (!$this->isSignatureValid($request, $dataId, $signatureHeader)) {
+            return response()->json(['error' => 'No autorizado: firma inválida'], 401);
+        }
+
+        // 3. Consultar el pago en MercadoPago
+        $accessToken = config('services.mercadopago.access_token');
+        $response = Http::withToken($accessToken)
+            ->get("https://api.mercadopago.com/v1/payments/{$dataId}");
+
+        if ($response->status() === 401 || $response->status() === 403) {
+            Log::error("Error de autenticación al consultar pago en MP (HTTP {$response->status()})", [
+                'data_id' => $dataId,
             ]);
-            return response()->json(['error' => 'No autorizado'], 401);
+            return response()->json(['error' => 'Error de autenticación al consultar pago en MercadoPago'], 500);
         }
 
-        $topic = $request->input('topic') ?? $request->input('type');
-        $paymentId = $request->input('data.id') ?? $request->input('id');
-
-        if ($topic !== 'payment' || !$paymentId) {
-            return response()->json(['message' => 'Evento ignorado'], 200);
+        if ($response->status() === 404) {
+            Log::warning("Pago no encontrado en MercadoPago (404)", ['data_id' => $dataId]);
+            return response()->json(['message' => 'Pago no encontrado en MercadoPago'], 200);
         }
-
-        // Consultar el pago en MercadoPago
-        $response = Http::withToken(config('mercadopago.access_token'))
-            ->get("https://api.mercadopago.com/v1/payments/{$paymentId}");
 
         if (!$response->successful()) {
-            Log::error('Error al consultar pago en MP', ['id' => $paymentId]);
+            Log::error("Error al consultar pago en MP (HTTP {$response->status()})", ['data_id' => $dataId]);
             return response()->json(['error' => 'No se pudo verificar el pago'], 500);
         }
 
         $paymentData = $response->json();
-        $status = $paymentData['status'];
-        $pedidoId = $paymentData['external_reference'];
+        $status = $paymentData['status'] ?? null;
+        $pedidoId = $paymentData['external_reference'] ?? null;
 
-        // Transacción de actualización de pedido y stock
+        if (!$pedidoId) {
+            Log::warning("Pago sin referencia externa de pedido", ['data_id' => $dataId]);
+            return response()->json(['message' => 'Pago sin referencia de pedido'], 200);
+        }
+
+        $targetState = match ($status) {
+            'approved' => 'pagado',
+            'rejected', 'cancelled', 'refunded', 'charged_back' => 'cancelado',
+            'pending', 'in_process', 'authorized', 'in_mediation' => 'pendiente',
+            default => null,
+        };
+
+        // 4. Transacción de actualización de pedido y stock con idempotencia y guards de transición
         DB::beginTransaction();
         try {
             $pedido = Pedido::where('id', $pedidoId)->lockForUpdate()->first();
 
             if (!$pedido) {
                 DB::rollBack();
-                Log::warning("Pedido no encontrado con ID externo: $pedidoId");
+                Log::warning("Pedido no encontrado con ID externo: {$pedidoId}");
                 return response()->json(['error' => 'Pedido no encontrado'], 404);
             }
 
-            // Si el pedido ya está pagado o cancelado (estados terminales)
-            // y el evento trae un estado no-terminal, bloqueamos la actualización.
-            $terminalStates = ['pagado', 'cancelado'];
-            $nonTerminalEventStatuses = ['pending', 'in_process', 'authorized', 'in_mediation'];
-
-            if (in_array($pedido->estado, $terminalStates) && in_array($status, $nonTerminalEventStatuses)) {
-                Log::warning("Intento de retroceso de estado ignorado en webhook de MercadoPago para el pedido #{$pedido->id}.", [
-                    'pedido_id' => $pedido->id,
-                    'estado_actual' => $pedido->estado,
-                    'estado_evento' => $status,
-                    'payment_id' => $paymentId
-                ]);
+            // Idempotencia: Si ya tiene el mismo mercado_pago_id y el mismo estado -> responder 200 sin escribir
+            if ($pedido->mercado_pago_id === (string)$dataId && $pedido->estado === $targetState) {
                 DB::commit();
-                return response()->json(['message' => 'Intento de retroceso ignorado'], 200);
+                return response()->json(['message' => 'Notificación duplicada ya procesada'], 200);
             }
 
-            // Guardamos el mercado_pago_id
-            $pedido->mercado_pago_id = $paymentId;
+            // Guards de transiciones válidas:
+            // 1) Desde 'cancelado' no se sale bajo ninguna circunstancia
+            if ($pedido->estado === 'cancelado') {
+                $pedido->mercado_pago_id = (string)$dataId;
+                $pedido->save();
+                DB::commit();
+                Log::warning("Transición de estado ignorada para pedido cancelado #{$pedido->id}.", [
+                    'pedido_id' => $pedido->id,
+                    'estado_actual' => 'cancelado',
+                    'estado_evento' => $status,
+                    'payment_id' => $dataId,
+                ]);
+                return response()->json(['message' => 'Transición no permitida desde cancelado'], 200);
+            }
 
-            // Procesar estados
-            if ($status === 'approved') {
-                // Idempotencia: Si ya estaba pagado, no hacemos nada más
+            // 2) Desde 'pagado' solo se puede pasar a 'cancelado' (reembolso/contracargo/cancelación)
+            if ($pedido->estado === 'pagado' && $targetState !== 'cancelado') {
+                $pedido->mercado_pago_id = (string)$dataId;
+                $pedido->save();
+                DB::commit();
+                Log::warning("Transición de estado ignorada para pedido pagado #{$pedido->id}.", [
+                    'pedido_id' => $pedido->id,
+                    'estado_actual' => 'pagado',
+                    'estado_evento' => $status,
+                    'payment_id' => $dataId,
+                ]);
+                return response()->json(['message' => 'Transición no permitida desde pagado'], 200);
+            }
+
+            // Actualizar mercado_pago_id
+            $pedido->mercado_pago_id = (string)$dataId;
+
+            // Procesar cambio de estado
+            if ($targetState === 'pagado') {
                 if ($pedido->estado !== 'pagado') {
                     $pedido->estado = 'pagado';
                     $pedido->save();
                     Log::info("Pedido {$pedido->id} actualizado a estado: pagado");
                 }
-            } elseif (in_array($status, ['rejected', 'cancelled', 'refunded', 'charged_back'])) {
-                // Estados terminales que implican cancelación y reposición de stock
-                // Idempotencia: Reponer stock solo si el estado actual no es 'cancelado'
+            } elseif ($targetState === 'cancelado') {
                 if ($pedido->estado !== 'cancelado') {
                     $pedido->estado = 'cancelado';
                     $pedido->save();
@@ -112,22 +140,15 @@ class WebhookController extends Controller
                     }
                     Log::info("Pedido {$pedido->id} actualizado a estado: cancelado (Pago fallido/reembolsado: {$status}). Stock repuesto.");
                 }
-            } elseif ($status === 'pending') {
+            } elseif ($targetState === 'pendiente') {
                 if ($pedido->estado !== 'pendiente') {
                     $pedido->estado = 'pendiente';
                     $pedido->save();
                     Log::info("Pedido {$pedido->id} actualizado a estado: pendiente");
                 }
-            } elseif (in_array($status, ['in_process', 'authorized', 'in_mediation'])) {
-                // Loguear explícitamente estados intermedios
-                Log::info("Webhook MercadoPago - Pago {$paymentId} para pedido {$pedido->id} en estado intermedio: {$status}");
-                // Opcionalmente podemos mantenerlo en pendiente
-                if ($pedido->estado !== 'pendiente') {
-                    $pedido->estado = 'pendiente';
-                    $pedido->save();
-                }
             } else {
-                Log::info("Webhook MercadoPago - Pago {$paymentId} para pedido {$pedido->id} con estado desconocido: {$status}");
+                Log::info("Webhook MercadoPago - Pago {$dataId} para pedido {$pedido->id} con estado no mapeado: {$status}");
+                $pedido->save();
             }
 
             DB::commit();
@@ -145,25 +166,17 @@ class WebhookController extends Controller
     /**
      * Valida la firma del webhook de MercadoPago
      */
-    private function isSignatureValid(Request $request): bool
+    private function isSignatureValid(Request $request, string $dataId, string $signatureHeader): bool
     {
-        $signatureHeader = $request->header('x-signature');
         $requestId = $request->header('x-request-id') ?? '';
-        $rawSecret = config('mercadopago.webhook_secret_token');
-        $webhookSecret = is_string($rawSecret) ? trim($rawSecret) : '';
+        $webhookSecret = config('services.mercadopago.webhook_secret');
 
-        // Falla cerrado: si no hay secreto configurado, rechazar
         if (!$webhookSecret) {
             Log::error('Webhook MercadoPago: No se ha configurado el secreto de validación (WEBHOOK_SECRET_TOKEN)');
             return false;
         }
 
-        if (!$signatureHeader) {
-            return false;
-        }
-
-        // Extraer ts y v1 del header x-signature
-        // Formato: ts=TIMESTAMP,v1=HASH
+        // Extraer ts y v1 del header x-signature (formato: ts=TIMESTAMP,v1=HASH)
         $parts = explode(',', $signatureHeader);
         $ts = null;
         $v1 = null;
@@ -181,43 +194,27 @@ class WebhookController extends Controller
             }
         }
 
-        if (!$ts || !$v1) {
+        if (!$ts || !$v1 || !$requestId) {
+            $cleanDataId = strtolower($dataId);
+            $manifest = "id:{$cleanDataId};request-id:{$requestId};ts:{$ts};";
+            Log::warning('Firma de webhook MercadoPago inválida (header malformado o sin request-id)', [
+                'manifest' => $manifest,
+                'v1' => $v1,
+            ]);
             return false;
         }
 
-        // Obtener data.id (payment ID) de la consulta (query parameter) o fallback al body
-        $dataId = $request->query('data_id')
-               ?? $request->query('data.id')
-               ?? $request->query('id')
-               ?? data_get($request->all(), 'data.id');
+        $cleanDataId = strtolower($dataId);
+        $manifest = "id:{$cleanDataId};request-id:{$requestId};ts:{$ts};";
 
-        if (!$dataId) {
-            return false;
-        }
-
-        // Construir string del manifiesto
-        // Formato: id:{data_id};request-id:{request_id};ts:{ts};
-        $manifest = "id:{$dataId};request-id:{$requestId};ts:{$ts};";
-
-        // Calcular HMAC SHA256
         $calculatedSignature = hash_hmac('sha256', $manifest, $webhookSecret);
 
-        // Comparación segura contra ataques de tiempo
         $isValid = hash_equals($calculatedSignature, $v1);
 
         if (!$isValid) {
-            Log::error('Webhook Signature Mismatch Details (DIAGNOSIS)', [
-                'data_id_used' => $dataId,
-                'ts_used' => $ts,
-                'request_id_used' => $requestId,
-                'manifest_string' => $manifest,
-                'calculated_hash' => $calculatedSignature,
-                'received_v1' => $v1,
-                'query_string_crudo' => $request->getQueryString(),
-                'query_completo' => $request->query(),
-                'secret_length' => strlen((string) $rawSecret),
-                'secret_tiene_espacios' => (string) $rawSecret !== (string) $webhookSecret,
-                'header_signature' => $signatureHeader,
+            Log::warning('Firma de webhook MercadoPago inválida', [
+                'manifest' => $manifest,
+                'v1' => $v1,
             ]);
         }
 
