@@ -24,7 +24,8 @@ class WebhookTest extends TestCase
 
     private function getSignatureHeader($dataId, $requestId, $ts, $secret = 'test_secret_token')
     {
-        $manifest = "id:{$dataId};request-id:{$requestId};ts:{$ts};";
+        $cleanDataId = strtolower($dataId);
+        $manifest = "id:{$cleanDataId};request-id:{$requestId};ts:{$ts};";
         $v1 = hash_hmac('sha256', $manifest, $secret);
         return "ts={$ts},v1={$v1}";
     }
@@ -236,6 +237,90 @@ class WebhookTest extends TestCase
         $response->assertJson(['message' => 'Transición no permitida desde cancelado']);
         // Debe permanecer cancelado
         $this->assertEquals('cancelado', $pedido->fresh()->estado);
+        // mercado_pago_id no debe ser sobrescrito
+        $this->assertNull($pedido->fresh()->mercado_pago_id);
+    }
+
+    /** @test */
+    public function test_5d_paid_order_receiving_rejected_notification_from_different_payment_is_ignored()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create([
+            'estado' => 'pagado',
+            'mercado_pago_id' => 'payment_A'
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $paymentB = 'payment_B';
+        $requestId = 'req_id_different_payment';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentB, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentB}" => Http::response([
+                'status' => 'rejected',
+                'external_reference' => (string)$pedido->id
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentB . '&type=payment', [], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        $response->assertJson(['message' => 'Transición no permitida desde pagado para este pago']);
+        // Permanece pagado y mercado_pago_id sigue siendo payment_A
+        $this->assertEquals('pagado', $pedido->fresh()->estado);
+        $this->assertEquals('payment_A', $pedido->fresh()->mercado_pago_id);
+        // El stock no se altera
+        $this->assertEquals(10, $producto->fresh()->stock);
+    }
+
+    /** @test */
+    public function test_5e_refunded_notification_for_matching_payment_on_paid_order_transitions_to_cancelled_and_restores_stock()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $paymentA = 'payment_A';
+        $pedido = Pedido::factory()->create([
+            'estado' => 'pagado',
+            'mercado_pago_id' => $paymentA
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $requestId = 'req_id_refund';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentA, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentA}" => Http::response([
+                'status' => 'refunded',
+                'external_reference' => (string)$pedido->id
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentA . '&type=payment', [], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('cancelado', $pedido->fresh()->estado);
+        $this->assertEquals($paymentA, $pedido->fresh()->mercado_pago_id);
+        // Stock repuesto: 10 + 4 = 14
+        $this->assertEquals(14, $producto->fresh()->stock);
     }
 
     /** @test */

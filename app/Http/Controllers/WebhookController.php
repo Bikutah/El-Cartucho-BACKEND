@@ -86,10 +86,8 @@ class WebhookController extends Controller
             }
 
             // Guards de transiciones válidas:
-            // 1) Desde 'cancelado' no se sale bajo ninguna circunstancia
+            // 1) Desde 'cancelado' no se sale bajo ninguna circunstancia (y NO sobrescribir mercado_pago_id)
             if ($pedido->estado === 'cancelado') {
-                $pedido->mercado_pago_id = (string)$dataId;
-                $pedido->save();
                 DB::commit();
                 Log::warning("Transición de estado ignorada para pedido cancelado #{$pedido->id}.", [
                     'pedido_id' => $pedido->id,
@@ -100,21 +98,25 @@ class WebhookController extends Controller
                 return response()->json(['message' => 'Transición no permitida desde cancelado'], 200);
             }
 
-            // 2) Desde 'pagado' solo se puede pasar a 'cancelado' (reembolso/contracargo/cancelación)
-            if ($pedido->estado === 'pagado' && $targetState !== 'cancelado') {
-                $pedido->mercado_pago_id = (string)$dataId;
-                $pedido->save();
-                DB::commit();
-                Log::warning("Transición de estado ignorada para pedido pagado #{$pedido->id}.", [
-                    'pedido_id' => $pedido->id,
-                    'estado_actual' => 'pagado',
-                    'estado_evento' => $status,
-                    'payment_id' => $dataId,
-                ]);
-                return response()->json(['message' => 'Transición no permitida desde pagado'], 200);
+            // 2) Desde 'pagado' solo se permite pasar a 'cancelado' si $dataId coincide con mercado_pago_id del pedido y el status es refunded, charged_back o cancelled
+            if ($pedido->estado === 'pagado') {
+                $esMismoPago = ($pedido->mercado_pago_id !== null && (string)$pedido->mercado_pago_id === (string)$dataId);
+                $esReembolsoValido = $esMismoPago && in_array($status, ['refunded', 'charged_back', 'cancelled']);
+
+                if (!$esReembolsoValido) {
+                    DB::commit();
+                    Log::warning("Notificación de pago ignorada para pedido ya pagado #{$pedido->id}.", [
+                        'pedido_id' => $pedido->id,
+                        'estado_actual' => 'pagado',
+                        'estado_evento' => $status,
+                        'payment_id_actual' => $pedido->mercado_pago_id,
+                        'payment_id_evento' => $dataId,
+                    ]);
+                    return response()->json(['message' => 'Transición no permitida desde pagado para este pago'], 200);
+                }
             }
 
-            // Actualizar mercado_pago_id
+            // Actualizar mercado_pago_id SOLO tras superar guards válidos
             $pedido->mercado_pago_id = (string)$dataId;
 
             // Procesar cambio de estado
