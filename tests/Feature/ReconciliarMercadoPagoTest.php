@@ -17,7 +17,7 @@ class ReconciliarMercadoPagoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Config::set('mercadopago.access_token', 'test_access_token');
+        Config::set('services.mercadopago.access_token', 'test_access_token');
     }
 
     /** @test */

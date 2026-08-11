@@ -64,7 +64,7 @@ class LiberarPedidosVencidos extends Command
             // Si tiene mercado_pago_id, verificar contra la API de MercadoPago
             if ($pedido->mercado_pago_id) {
                 try {
-                    $response = Http::timeout(5)->withToken(config('mercadopago.access_token'))
+                    $response = Http::timeout(5)->withToken(config('services.mercadopago.access_token'))
                         ->get("https://api.mercadopago.com/v1/payments/{$pedido->mercado_pago_id}");
 
                     if ($response->successful()) {
