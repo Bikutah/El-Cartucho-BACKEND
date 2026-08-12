@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Pedido;
 use App\Models\DetallePedido;
 use App\Models\Producto;
+use App\Models\ZonaEnvio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -186,6 +187,7 @@ class PedidoController extends Controller
         try {
             $pedido = Pedido::with([
                 'user',
+                'zonaEnvio',
                 'detalles' => function ($query) {
                     $query->with(['producto' => function ($query) {
                         $query->with('imagenes');
@@ -207,6 +209,7 @@ class PedidoController extends Controller
     {
         try {
             $pedido = Pedido::with([
+                'zonaEnvio',
                 'detalles' => function ($query) {
                     $query->with('producto');
                 }
@@ -237,11 +240,21 @@ class PedidoController extends Controller
         // Verificar que el CP exista en Argentina
         $this->validarCodigoPostal($cp);
 
-        // Mock del costo según código postal
-        $costoEnvio = random_int(7000, 20000);
+        // Resolver la zona de envío según el código postal
+        $zona = ZonaEnvio::paraCodigoPostal((string) $cp);
+
+        if (!$zona) {
+            return response()->json([
+                'error'   => 'No realizamos envíos a ese código postal',
+                'message' => 'No realizamos envíos a ese código postal'
+            ], 422);
+        }
 
         return response()->json([
-            'costo_envio' => $costoEnvio,
+            'costo_envio'   => (float) $zona->costo,
+            'costo'         => (float) $zona->costo,
+            'zona'          => $zona->nombre,
+            'zona_envio_id' => $zona->id,
         ]);
     }
 
@@ -281,11 +294,24 @@ class PedidoController extends Controller
         ]);
 
         $user = $request->user();
+        $cp = $request->input('codigo_postal', $user->codigo_postal ?? '');
+
+        // Resolver la zona de envío antes de iniciar la transacción
+        $zona = ZonaEnvio::paraCodigoPostal((string) $cp);
+
+        if (!$zona) {
+            return response()->json([
+                'error'   => 'No realizamos envíos a ese código postal',
+                'message' => 'No realizamos envíos a ese código postal'
+            ], 422);
+        }
+
+        $costoEnvio = (float) $zona->costo;
 
         DB::beginTransaction();
 
         try {
-            $total = 0;
+            $totalProductos = 0;
             $detalles = [];
 
             // Calcular expiración a partir de config/mercadopago.php
@@ -297,7 +323,9 @@ class PedidoController extends Controller
                 'email'         => $request->input('email', $user->email),
                 'domicilio'     => $request->input('domicilio', $user->domicilio),
                 'ciudad'        => $request->input('ciudad', $user->ciudad),
-                'codigo_postal' => $request->input('codigo_postal', $user->codigo_postal ?? '1234'),
+                'codigo_postal' => $cp,
+                'costo_envio'   => $costoEnvio,
+                'zona_envio_id' => $zona->id,
                 'estado'        => 'pendiente',
                 'total'         => 0,
                 'expira_at'     => $expiracion,
@@ -311,7 +339,7 @@ class PedidoController extends Controller
                 }
 
                 $subtotal = $producto->precioUnitario * $item['cantidad'];
-                $total += $subtotal;
+                $totalProductos += $subtotal;
 
                 $detalles[] = DetallePedido::create([
                     'pedido_id' => $pedido->id,
@@ -324,6 +352,7 @@ class PedidoController extends Controller
                 $producto->save();
             }
 
+            $total = $totalProductos + $costoEnvio;
             $pedido->update(['total' => $total]);
 
             DB::commit();
@@ -339,7 +368,7 @@ class PedidoController extends Controller
         // Llamada HTTP externa FUERA de la transacción principal
         try {
             $detallesCargados = DetallePedido::with('producto')->where('pedido_id', $pedido->id)->get();
-            $preference = $this->crearPreferenciaMercadoPago($pedido, $detallesCargados);
+            $preference = $this->crearPreferenciaMercadoPago($pedido->load('zonaEnvio'), $detallesCargados);
         } catch (\Exception $e) {
             // Si la preferencia falla, cancelamos el pedido y reponemos stock en una transacción aparte
             DB::beginTransaction();
@@ -407,6 +436,16 @@ class PedidoController extends Controller
                 'title' => $detalle->producto->nombre,
                 'quantity' => $detalle->cantidad,
                 'unit_price' => (float)$detalle->precio_unitario,
+                'currency_id' => 'ARS'
+            ];
+        }
+
+        if ($pedido->costo_envio > 0) {
+            $nombreZona = optional($pedido->zonaEnvio)->nombre ?? 'Domicilio';
+            $items[] = [
+                'title'       => "Envío a domicilio ({$nombreZona})",
+                'quantity'    => 1,
+                'unit_price'  => (float)$pedido->costo_envio,
                 'currency_id' => 'ARS'
             ];
         }

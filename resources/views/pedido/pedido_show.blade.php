@@ -312,8 +312,14 @@
                 <span class="summary-value">${{ number_format($subtotal, 2, ',', '.') }}</span>
             </div>
             <div class="summary-row">
-                <span class="summary-label">Envío:</span>
-                <span class="summary-value">Gratis</span>
+                <span class="summary-label">Envío {{ $pedido->zonaEnvio ? '(' . $pedido->zonaEnvio->nombre . ')' : '' }}:</span>
+                <span class="summary-value">
+                    @if($pedido->costo_envio > 0)
+                        ${{ number_format($pedido->costo_envio, 2, ',', '.') }}
+                    @else
+                        Sin registro de envío
+                    @endif
+                </span>
             </div>
             <div class="summary-row">
                 <span class="summary-label">Impuestos:</span>

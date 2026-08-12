@@ -14,6 +14,7 @@ use App\Http\Controllers\WebhookController;
 use App\Http\Controllers\EstadisticasController;
 
 use App\Http\Controllers\ClienteController;
+use App\Http\Controllers\ZonaEnvioController;
 
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -31,6 +32,8 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::get('/pedidos/{id}/imprimir', [PedidoController::class, 'imprimir'])->name('pedidos.imprimir');
 
     Route::resource('clientes', ClienteController::class)->only(['index', 'show']);
+
+    Route::resource('zonas-envio', ZonaEnvioController::class);
 
     # Productos
     Route::resource('productos', ProductoController::class);

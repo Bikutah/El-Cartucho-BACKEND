@@ -57,6 +57,13 @@
                 <span>Clientes</span>
             </a>
         </li>
+
+        <li class="nav-item">
+            <a class="nav-link d-flex align-items-center {{ request()->is('zonas-envio*') ? 'active' : '' }}" href="{{ route('zonas-envio.index') }}">
+                <i class="fas fa-truck me-2"></i>
+                <span>Zonas de Envío</span>
+            </a>
+        </li>
     </ul>
 </aside>
 
@@ -114,6 +121,12 @@
                 <a class="nav-link d-flex align-items-center {{ request()->is('clientes*') ? 'active' : '' }}" href="{{ route('clientes.index') }}">
                     <i class="fas fa-users me-2"></i>
                     <span>Clientes</span>
+                </a>
+            </li>
+            <li class="nav-item">
+                <a class="nav-link d-flex align-items-center {{ request()->is('zonas-envio*') ? 'active' : '' }}" href="{{ route('zonas-envio.index') }}">
+                    <i class="fas fa-truck me-2"></i>
+                    <span>Zonas de Envío</span>
                 </a>
             </li>
         </ul>
