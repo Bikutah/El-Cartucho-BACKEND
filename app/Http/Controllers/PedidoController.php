@@ -4,11 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Pedido;
 use App\Models\DetallePedido;
+use App\Models\PedidoHistorialEstado;
 use App\Models\Producto;
 use App\Models\ZonaEnvio;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use App\Exceptions\CodigoPostalNoEncontradoException;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
@@ -18,11 +20,12 @@ class PedidoController extends Controller
     public function index(Request $request)
     {
         $request->validate([
-            'id'        => 'nullable|integer|min:1',
-            'cliente'   => 'nullable|string|max:255',
-            'estado'    => 'nullable|string|in:pendiente,pagado,cancelado',
-            'total_min' => 'nullable|numeric|min:0',
-            'total_max' => 'nullable|numeric|min:0|gte:total_min',
+            'id'           => 'nullable|integer|min:1',
+            'cliente'      => 'nullable|string|max:255',
+            'estado_pago'  => 'nullable|string|in:pendiente,pagado,rechazado,expirado,reembolsado',
+            'estado_envio' => 'nullable|string|in:sin_preparar,preparando,enviado,entregado,devuelto',
+            'total_min'    => 'nullable|numeric|min:0',
+            'total_max'    => 'nullable|numeric|min:0|gte:total_min',
         ]);
 
         session(['listado_url.pedidos' => url()->full()]);
@@ -44,8 +47,12 @@ class PedidoController extends Controller
             });
         }
 
-        if ($request->filled('estado')) {
-            $query->where('estado', $request->input('estado'));
+        if ($request->filled('estado_pago')) {
+            $query->where('estado_pago', $request->input('estado_pago'));
+        }
+
+        if ($request->filled('estado_envio')) {
+            $query->where('estado_envio', $request->input('estado_envio'));
         }
 
         if ($request->filled('total_min')) {
@@ -64,13 +71,27 @@ class PedidoController extends Controller
             ['name' => 'id', 'placeholder' => 'Buscar por ID del pedido'],
             ['name' => 'cliente', 'placeholder' => 'Buscar por nombre, email o UID'],
             [
-                'name' => 'estado',
-                'placeholder' => 'Filtrar por estado',
-                'type' => 'select',
-                'options' => [
-                    'pendiente' => 'Pendiente',
-                    'pagado'    => 'Pagado',
-                    'cancelado' => 'Cancelado'
+                'name'        => 'estado_pago',
+                'placeholder' => 'Filtrar por pago',
+                'type'        => 'select',
+                'options'     => [
+                    'pendiente'   => 'Pendiente',
+                    'pagado'      => 'Pagado',
+                    'rechazado'   => 'Rechazado',
+                    'expirado'    => 'Expirado',
+                    'reembolsado' => 'Reembolsado',
+                ]
+            ],
+            [
+                'name'        => 'estado_envio',
+                'placeholder' => 'Filtrar por envío',
+                'type'        => 'select',
+                'options'     => [
+                    'sin_preparar' => 'Sin preparar',
+                    'preparando'   => 'Preparando',
+                    'enviado'      => 'Enviado',
+                    'entregado'    => 'Entregado',
+                    'devuelto'     => 'Devuelto',
                 ]
             ],
             ['name' => 'total_min', 'placeholder' => 'Total mínimo ($)'],
@@ -79,52 +100,65 @@ class PedidoController extends Controller
 
         // Reutilizar renderFila
         $renderFila = function ($pedido) {
-            $getEstadoBadge = function ($estado) {
+            $getEstadoPagoBadge = function ($estado) {
                 $badges = [
-                    'pendiente' => '<span class="status-badge status-pending"><i class="fas fa-clock"></i><span>Pendiente</span></span>',
-                    'pagado'    => '<span class="status-badge status-paid"><i class="fas fa-check-circle"></i><span>Pagado</span></span>',
-                    'cancelado' => '<span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i><span>Cancelado</span></span>'
+                    'pendiente'   => '<span class="status-badge status-pending"><i class="fas fa-clock"></i><span>Pendiente</span></span>',
+                    'pagado'      => '<span class="status-badge status-paid"><i class="fas fa-check-circle"></i><span>Pagado</span></span>',
+                    'rechazado'   => '<span class="status-badge status-cancelled"><i class="fas fa-times-circle"></i><span>Rechazado</span></span>',
+                    'expirado'    => '<span class="status-badge status-cancelled"><i class="fas fa-hourglass-end"></i><span>Expirado</span></span>',
+                    'reembolsado' => '<span class="status-badge status-cancelled"><i class="fas fa-undo"></i><span>Reembolsado</span></span>',
                 ];
                 return $badges[$estado] ?? '<span class="status-badge status-unknown">Desconocido</span>';
+            };
+
+            $getEstadoEnvioBadge = function ($estado) {
+                if (!$estado) {
+                    return '<span class="badge bg-secondary">—</span>';
+                }
+                $badges = [
+                    'sin_preparar' => '<span class="badge bg-warning text-dark"><i class="fas fa-box me-1"></i>Sin preparar</span>',
+                    'preparando'   => '<span class="badge bg-info text-dark"><i class="fas fa-dolly me-1"></i>Preparando</span>',
+                    'enviado'      => '<span class="badge bg-primary"><i class="fas fa-truck me-1"></i>Enviado</span>',
+                    'entregado'    => '<span class="badge bg-success"><i class="fas fa-home me-1"></i>Entregado</span>',
+                    'devuelto'     => '<span class="badge bg-danger"><i class="fas fa-undo me-1"></i>Devuelto</span>',
+                ];
+                return $badges[$estado] ?? '<span class="badge bg-secondary">Desconocido</span>';
             };
 
             $productosResumen = collect($pedido->detalles)->map(function ($detalle) {
                 $nombreProducto = optional($detalle->producto)->nombre ?? 'Producto eliminado';
                 return [
-                    'nombre' => $nombreProducto,
+                    'nombre'   => $nombreProducto,
                     'cantidad' => $detalle->cantidad,
-                    'precio' => $detalle->precio_unitario
+                    'precio'   => $detalle->precio_unitario
                 ];
             });
 
             $totalProductos = $productosResumen->sum('cantidad');
             $primerProducto = $productosResumen->first();
 
-            if ($pedido->user) {
-                $nombreCliente = e($pedido->user->name . ($pedido->user->apellido ? ' ' . $pedido->user->apellido : ''));
-                $clienteHtml = '<a href="' . route('clientes.show', $pedido->user->id) . '" class="text-decoration-none fw-bold text-primary"><i class="fas fa-user me-1"></i>' . $nombreCliente . '</a>';
-            } else {
-                $clienteHtml = '<span class="status-badge status-unknown" data-bs-toggle="tooltip" title="UID: ' . e($pedido->firebase_uid) . '"><i class="fas fa-user-slash me-1"></i>Sin cliente asociado</span>';
-            }
+            $clienteNombre = optional($pedido->user)->name ?? 'Sin cliente asociado';
+            $clienteEmail = optional($pedido->user)->email ?? $pedido->email;
 
             return '
             <div class="table-cell" data-label="ID">
                 <span class="table-cell-label">ID:</span>
-                <div class="order-id">
-                    <span class="order-number">#' . str_pad($pedido->id, 4, '0', STR_PAD_LEFT) . '</span>
-                </div>
+                <span class="order-id">#' . str_pad($pedido->id, 4, '0', STR_PAD_LEFT) . '</span>
             </div>
             <div class="table-cell" data-label="Cliente">
                 <span class="table-cell-label">Cliente:</span>
-                <div class="customer-info">
-                    <div class="customer-details">
-                        ' . $clienteHtml . '
-                    </div>
+                <div class="client-info">
+                    <span class="client-name">' . e($clienteNombre) . '</span>
+                    <small class="client-email">' . e($clienteEmail) . '</small>
                 </div>
             </div>
-            <div class="table-cell" data-label="Estado">
-                <span class="table-cell-label">Estado:</span>
-                ' . $getEstadoBadge($pedido->estado) . '
+            <div class="table-cell" data-label="Pago">
+                <span class="table-cell-label">Pago:</span>
+                ' . $getEstadoPagoBadge($pedido->estado_pago) . '
+            </div>
+            <div class="table-cell" data-label="Envío">
+                <span class="table-cell-label">Envío:</span>
+                ' . $getEstadoEnvioBadge($pedido->estado_envio) . '
             </div>
             <div class="table-cell" data-label="Total">
                 <span class="table-cell-label">Total:</span>
@@ -164,7 +198,8 @@ class PedidoController extends Controller
                 'columnas' => [
                     ['label' => 'ID'],
                     ['label' => 'Cliente'],
-                    ['label' => 'Estado'],
+                    ['label' => 'Pago'],
+                    ['label' => 'Envío'],
                     ['label' => 'Total'],
                     ['label' => 'Fecha'],
                     ['label' => 'Productos']
@@ -188,6 +223,7 @@ class PedidoController extends Controller
             $pedido = Pedido::with([
                 'user',
                 'zonaEnvio',
+                'historialEstados.user',
                 'detalles' => function ($query) {
                     $query->with(['producto' => function ($query) {
                         $query->with('imagenes');
@@ -202,6 +238,38 @@ class PedidoController extends Controller
         } catch (\Exception $e) {
             return redirect()->route('pedidos.index')
                 ->with('error', 'Error al cargar el pedido: ' . $e->getMessage());
+        }
+    }
+
+    public function update(Request $request, $id)
+    {
+        $pedido = Pedido::findOrFail($id);
+
+        $request->validate([
+            'estado_envio'    => 'required|string',
+            'transportista'   => 'nullable|string|max:255',
+            'tracking_numero' => 'nullable|string|max:255',
+            'observacion'     => 'nullable|string',
+        ]);
+
+        try {
+            $pedido->cambiarEstadoEnvio(
+                $request->input('estado_envio'),
+                'panel',
+                auth()->id(),
+                $request->input('observacion'),
+                $request->input('transportista'),
+                $request->input('tracking_numero')
+            );
+
+            return redirect()->route('pedidos.show', $pedido->id)
+                ->with('success', 'Estado de envío actualizado correctamente.');
+        } catch (\DomainException $e) {
+            return redirect()->route('pedidos.show', $pedido->id)
+                ->with('error', $e->getMessage());
+        } catch (\Exception $e) {
+            return redirect()->route('pedidos.show', $pedido->id)
+                ->with('error', 'Error al actualizar el estado: ' . $e->getMessage());
         }
     }
 
@@ -228,13 +296,6 @@ class PedidoController extends Controller
         }
     }
 
-    /*
-     * Método para calcular el costo de envío basado en el código postal.
-     * 
-     * @param Request $request
-     * @return \Illuminate\Http\JsonResponse
-     */
-
     public function calcularCostoEnvio($cp)
     {
         // Verificar que el CP exista en Argentina
@@ -258,39 +319,38 @@ class PedidoController extends Controller
         ]);
     }
 
-   private function validarCodigoPostal($cp)
+    private function validarCodigoPostal($cp)
     {
-        // Consulta a la API
-        $response = Http::get("http://api.zippopotam.us/ar/{$cp}");
+        // Limpiar el CP manteniendo solo números
+        $cpLimpio = preg_replace('/[^0-9]/', '', $cp);
 
-        // Verifica que la respuesta sea exitosa
-        if (!$response->successful()) {
-            throw new CodigoPostalNoEncontradoException();
+        // CP de Argentina típicamente tienen 4 dígitos
+        if (strlen($cpLimpio) < 4) {
+            throw new CodigoPostalNoEncontradoException("El código postal debe tener al menos 4 dígitos");
         }
 
-        // Extrae el JSON
-        $data = $response->json();
+        try {
+            $response = Http::timeout(3)
+                ->get("http://api.zippopotam.us/ar/{$cpLimpio}");
 
-        // Si no contiene el array de lugares o está vacío, también es inválido
-        if (!isset($data['places']) || empty($data['places'])) {
-            throw new CodigoPostalNoEncontradoException();
+            if ($response->status() === 404) {
+                throw new CodigoPostalNoEncontradoException("El código postal {$cp} no fue encontrado en Argentina");
+            }
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            Log::warning("API de código postal no disponible, omitiendo validación: " . $e->getMessage());
         }
-
-        // Todo ok, opcional: podés devolver datos si los querés usar
-        return $data;
     }
-
 
     public function store(Request $request)
     {
         $request->validate([
+            'codigo_postal'           => 'required|string',
             'productos'               => 'required|array|min:1',
             'productos.*.producto_id' => 'required|exists:productos,id',
             'productos.*.cantidad'    => 'required|integer|min:1',
-            'email'                   => 'nullable|email|max:255',
-            'codigo_postal'           => 'nullable|string|regex:/^\d{4}$/',
-            'domicilio'               => 'nullable|string|max:255',
-            'ciudad'                  => 'nullable|string|max:255',
+            'email'                   => 'nullable|email',
+            'domicilio'               => 'nullable|string',
+            'ciudad'                  => 'nullable|string',
         ]);
 
         $user = $request->user();
@@ -327,8 +387,21 @@ class PedidoController extends Controller
                 'costo_envio'   => $costoEnvio,
                 'zona_envio_id' => $zona->id,
                 'estado'        => 'pendiente',
+                'estado_pago'   => 'pendiente',
+                'estado_envio'  => null,
                 'total'         => 0,
                 'expira_at'     => $expiracion,
+            ]);
+
+            PedidoHistorialEstado::create([
+                'pedido_id'       => $pedido->id,
+                'tipo'            => 'pago',
+                'estado_anterior' => null,
+                'estado_nuevo'    => 'pendiente',
+                'user_id'         => null,
+                'origen'          => 'sistema',
+                'observacion'     => 'Creación del pedido',
+                'created_at'      => now(),
             ]);
 
             foreach ($request->productos as $item) {
@@ -374,9 +447,8 @@ class PedidoController extends Controller
             DB::beginTransaction();
             try {
                 $pedidoACancelar = Pedido::where('id', $pedido->id)->lockForUpdate()->first();
-                if ($pedidoACancelar && $pedidoACancelar->estado === 'pendiente') {
-                    $pedidoACancelar->estado = 'cancelado';
-                    $pedidoACancelar->save();
+                if ($pedidoACancelar && $pedidoACancelar->estado_pago === 'pendiente') {
+                    $pedidoACancelar->cambiarEstadoPago('rechazado', 'sistema');
 
                     $detallesAReponer = DetallePedido::where('pedido_id', $pedido->id)->get();
                     foreach ($detallesAReponer as $detalle) {
@@ -482,11 +554,14 @@ class PedidoController extends Controller
             ->get()
             ->map(function ($pedido) {
                 return [
-                    'id'         => $pedido->id,
-                    'estado'     => $pedido->estado,
-                    'total'      => (float) $pedido->total,
-                    'created_at' => $pedido->created_at,
-                    'productos'  => $pedido->detalles->map(function ($d) {
+                    'id'             => $pedido->id,
+                    'estado'         => $pedido->estado,
+                    'estado_pago'    => $pedido->estado_pago,
+                    'estado_envio'   => $pedido->estado_envio,
+                    'estado_visible' => $pedido->estado_visible,
+                    'total'          => (float) $pedido->total,
+                    'created_at'     => $pedido->created_at,
+                    'productos'      => $pedido->detalles->map(function ($d) {
                         return [
                             'nombre'          => optional($d->producto)->nombre ?? 'Producto eliminado',
                             'cantidad'        => $d->cantidad,
