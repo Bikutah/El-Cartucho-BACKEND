@@ -41,6 +41,7 @@ Route::middleware(['firebase.token', 'firebase.user'])->group(function () {
     #Pedidos
     Route::post('/pedido/crear', [PedidoController::class, 'store']);
     Route::get('/mis-pedidos', [PedidoController::class, 'misPedidos']);
+    Route::get('/mis-pedidos/{id}', [PedidoController::class, 'detallePedidoCliente']);
 
     #Carrito
     Route::get('/carrito', [CarritoController::class, 'index']);

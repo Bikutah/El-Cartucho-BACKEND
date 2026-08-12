@@ -559,6 +559,8 @@ class PedidoController extends Controller
                     'estado_pago'    => $pedido->estado_pago,
                     'estado_envio'   => $pedido->estado_envio,
                     'estado_visible' => $pedido->estado_visible,
+                    'costo_envio'    => (float) $pedido->costo_envio,
+                    'tiene_tracking' => !empty($pedido->tracking_numero),
                     'total'          => (float) $pedido->total,
                     'created_at'     => $pedido->created_at,
                     'productos'      => $pedido->detalles->map(function ($d) {
@@ -573,5 +575,110 @@ class PedidoController extends Controller
             });
 
         return response()->json($pedidos);
+    }
+
+    public function detallePedidoCliente(Request $request, $id)
+    {
+        $user = $request->user();
+
+        $pedido = Pedido::with([
+            'zonaEnvio',
+            'detalles.producto.imagenes',
+            'historialEstados' => function ($q) {
+                $q->orderBy('created_at', 'asc');
+            }
+        ])->find($id);
+
+        if (!$pedido) {
+            return response()->json(['message' => 'Pedido no encontrado'], 404);
+        }
+
+        // Verificar autorización: el pedido debe pertenecer al usuario autenticado (user_id o firebase_uid)
+        $perteneceAlUsuario = ($pedido->user_id && $pedido->user_id === $user->id)
+            || ($pedido->firebase_uid && $pedido->firebase_uid === $user->firebase_uid);
+
+        if (!$perteneceAlUsuario) {
+            return response()->json(['message' => 'Pedido no encontrado'], 404);
+        }
+
+        $costoEnvio = (float) $pedido->costo_envio;
+        $total = (float) $pedido->total;
+        $subtotalProductos = (float) ($total - $costoEnvio);
+
+        $mapearEstadoEtiqueta = function ($tipo, $estadoNuevo) {
+            if ($tipo === 'pago') {
+                return match ($estadoNuevo) {
+                    'pagado'      => 'Pago confirmado',
+                    'rechazado'   => 'Pago rechazado',
+                    'expirado'    => 'Expirado',
+                    'reembolsado' => 'Reembolsado',
+                    'pendiente'   => 'Esperando pago',
+                    default       => ucfirst($estadoNuevo),
+                };
+            }
+            if ($tipo === 'envio') {
+                return match ($estadoNuevo) {
+                    'sin_preparar' => 'Pago confirmado',
+                    'preparando'   => 'Preparando tu pedido',
+                    'enviado'      => 'En camino',
+                    'entregado'    => 'Entregado',
+                    'devuelto'     => 'Devuelto',
+                    default        => ucfirst($estadoNuevo),
+                };
+            }
+            return ucfirst($estadoNuevo);
+        };
+
+        $historial = $pedido->historialEstados
+            ->filter(function ($item) {
+                if ($item->origen === 'sistema') {
+                    return false;
+                }
+                if ($item->tipo === 'pago' && $item->estado_nuevo === 'pendiente') {
+                    return false;
+                }
+                return true;
+            })
+            ->map(function ($item) use ($mapearEstadoEtiqueta) {
+                return [
+                    'estado' => $mapearEstadoEtiqueta($item->tipo, $item->estado_nuevo),
+                    'fecha'  => $item->created_at,
+                ];
+            })
+            ->values();
+
+        return response()->json([
+            'id'                 => $pedido->id,
+            'estado_pago'        => $pedido->estado_pago,
+            'estado_envio'       => $pedido->estado_envio,
+            'estado_visible'     => $pedido->estado_visible,
+            'created_at'         => $pedido->created_at,
+            'total'              => $total,
+            'subtotal_productos' => $subtotalProductos,
+            'costo_envio'        => $costoEnvio,
+            'zona_envio'         => optional($pedido->zonaEnvio)->nombre ?? 'Sin zona',
+            'envio'              => [
+                'domicilio'       => $pedido->domicilio,
+                'ciudad'          => $pedido->ciudad,
+                'codigo_postal'   => $pedido->codigo_postal,
+                'email'           => $pedido->email,
+                'transportista'   => $pedido->transportista,
+                'tracking_numero' => $pedido->tracking_numero,
+                'enviado_at'      => $pedido->enviado_at,
+                'entregado_at'    => $pedido->entregado_at,
+            ],
+            'productos'          => $pedido->detalles->map(function ($d) {
+                $precioUnitario = (float) $d->precio_unitario;
+                $cantidad = (int) $d->cantidad;
+                return [
+                    'nombre'          => optional($d->producto)->nombre ?? 'Producto eliminado',
+                    'cantidad'        => $cantidad,
+                    'precio_unitario' => $precioUnitario,
+                    'subtotal'        => (float) ($cantidad * $precioUnitario),
+                    'imagen'          => optional($d->producto?->imagenes->first())->url,
+                ];
+            }),
+            'historial'          => $historial,
+        ]);
     }
 }
