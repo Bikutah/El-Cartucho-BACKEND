@@ -16,6 +16,8 @@ class Pedido extends Model
         'domicilio',
         'ciudad',
         'codigo_postal',
+        'costo_envio',
+        'zona_envio_id',
         'estado',
         'mercado_pago_id',
         'mercado_pago_preference_id',
@@ -24,6 +26,7 @@ class Pedido extends Model
     ];
 
     protected $casts = [
+        'costo_envio' => 'decimal:2',
         'expira_at' => 'datetime',
     ];
 
@@ -35,5 +38,10 @@ class Pedido extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function zonaEnvio()
+    {
+        return $this->belongsTo(ZonaEnvio::class, 'zona_envio_id');
     }
 }

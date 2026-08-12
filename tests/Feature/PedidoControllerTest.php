@@ -23,9 +23,9 @@ class PedidoControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        Config::set('mercadopago.access_token', 'test_access_token');
-        Config::set('mercadopago.front_url', 'http://localhost:3000');
-        Config::set('mercadopago.notification_url', 'http://localhost/webhook');
+        $this->seed(\Database\Seeders\ZonaEnvioSeeder::class);
+        Config::set('services.mercadopago.access_token', 'test_access_token');
+        Config::set('services.mercadopago.front_url', 'http://localhost:3000');
         Config::set('mercadopago.expiration_hours', 72);
 
         $openSslConfig = [
@@ -47,7 +47,10 @@ class PedidoControllerTest extends TestCase
         openssl_x509_export($cert, $certOut);
         $this->certPem = $certOut;
 
-        $this->user = User::factory()->create(['firebase_uid' => 'test-pedido-uid']);
+        $this->user = User::factory()->create([
+            'firebase_uid'  => 'test-pedido-uid',
+            'codigo_postal' => '1043',
+        ]);
 
         Http::fake([
             'https://www.googleapis.com/*' => Http::response([
@@ -191,7 +194,7 @@ class PedidoControllerTest extends TestCase
             ->get("/clientes/{$this->user->id}")
             ->assertStatus(200)
             ->assertSee($this->user->name)
-            ->assertSee('1.000,00'); // 2 * 500
+            ->assertSee('16.000,00'); // 2 * 500 + 15000 envío
     }
 
     /** @test */
@@ -292,5 +295,33 @@ class PedidoControllerTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Sin pago registrado');
         $response->assertSee('(Referencia externa MP)');
+    }
+
+    /** @test */
+    public function test_6_created_preference_payload_does_not_contain_notification_url_key()
+    {
+        $producto = Producto::factory()->create(['stock' => 5, 'precioUnitario' => 100.0]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'productos' => [
+                    [
+                        'producto_id' => $producto->id,
+                        'cantidad'    => 1,
+                    ]
+                ],
+                'email'         => 'test@ejemplo.com',
+                'codigo_postal' => '1234',
+            ]);
+
+        $response->assertStatus(201);
+
+        Http::assertSent(function ($request) {
+            if ($request->url() === 'https://api.mercadopago.com/checkout/preferences') {
+                $data = json_decode($request->body(), true);
+                return !array_key_exists('notification_url', $data);
+            }
+            return true;
+        });
     }
 }

@@ -40,9 +40,9 @@ class ReconciliarMercadoPago extends Command
             $this->warn('Se aplicarán los cambios en la base de datos.');
         }
 
-        $accessToken = config('mercadopago.access_token');
+        $accessToken = config('services.mercadopago.access_token');
         if (!$accessToken) {
-            $this->error('Error: config("mercadopago.access_token") no está configurado.');
+            $this->error('Error: config("services.mercadopago.access_token") no está configurado.');
             return 1;
         }
 
