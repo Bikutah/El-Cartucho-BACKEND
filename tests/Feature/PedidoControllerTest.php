@@ -23,6 +23,7 @@ class PedidoControllerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->seed(\Database\Seeders\ZonaEnvioSeeder::class);
         Config::set('services.mercadopago.access_token', 'test_access_token');
         Config::set('services.mercadopago.front_url', 'http://localhost:3000');
         Config::set('mercadopago.expiration_hours', 72);
@@ -46,7 +47,10 @@ class PedidoControllerTest extends TestCase
         openssl_x509_export($cert, $certOut);
         $this->certPem = $certOut;
 
-        $this->user = User::factory()->create(['firebase_uid' => 'test-pedido-uid']);
+        $this->user = User::factory()->create([
+            'firebase_uid'  => 'test-pedido-uid',
+            'codigo_postal' => '1043',
+        ]);
 
         Http::fake([
             'https://www.googleapis.com/*' => Http::response([
@@ -190,7 +194,7 @@ class PedidoControllerTest extends TestCase
             ->get("/clientes/{$this->user->id}")
             ->assertStatus(200)
             ->assertSee($this->user->name)
-            ->assertSee('1.000,00'); // 2 * 500
+            ->assertSee('16.000,00'); // 2 * 500 + 15000 envío
     }
 
     /** @test */
