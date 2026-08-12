@@ -323,7 +323,7 @@ class PedidoController extends Controller
                 'email'         => $request->input('email', $user->email),
                 'domicilio'     => $request->input('domicilio', $user->domicilio),
                 'ciudad'        => $request->input('ciudad', $user->ciudad),
-                'codigo_postal' => $cp ?: '1234',
+                'codigo_postal' => $cp,
                 'costo_envio'   => $costoEnvio,
                 'zona_envio_id' => $zona->id,
                 'estado'        => 'pendiente',

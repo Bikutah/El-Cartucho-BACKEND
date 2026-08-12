@@ -36,11 +36,11 @@ class ZonaEnvio extends Model
      */
     public static function paraCodigoPostal(string $cp): ?self
     {
-        if (!preg_match('/\d{1,5}/', $cp, $matches)) {
+        if (!preg_match('/^\D*(\d{4})\D*$/', $cp, $matches)) {
             return null;
         }
 
-        $cpNum = (int) $matches[0];
+        $cpNum = (int) $matches[1];
 
         return self::where('activa', true)
             ->where('cp_desde', '<=', $cpNum)

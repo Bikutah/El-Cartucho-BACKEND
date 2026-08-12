@@ -381,4 +381,41 @@ class ZonaEnvioTest extends TestCase
         $this->assertNull($pedido->fresh()->zona_envio_id);
         $this->assertEquals(8000, (float)$pedido->fresh()->costo_envio); // Conserva el costo como snapshot
     }
+
+    /** @test */
+    public function test_12_cp_with_fewer_than_4_digits_returns_null_and_endpoint_returns_422()
+    {
+        ZonaEnvio::create([
+            'nombre'   => 'Centro',
+            'cp_desde' => 10,
+            'cp_hasta' => 99,
+            'costo'    => 5000,
+            'activa'   => true,
+            'orden'    => 0,
+        ]);
+
+        $this->assertNull(ZonaEnvio::paraCodigoPostal('12'));
+
+        $response = $this->getJson('/ed/pedido/costo/12');
+        $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function test_13_cp_with_more_than_4_digits_does_not_silently_resolve_and_returns_422()
+    {
+        ZonaEnvio::create([
+            'nombre'   => 'Chubut',
+            'cp_desde' => 9000,
+            'cp_hasta' => 9299,
+            'costo'    => 8000,
+            'activa'   => true,
+            'orden'    => 0,
+        ]);
+
+        $this->assertNull(ZonaEnvio::paraCodigoPostal('91000'));
+        $this->assertNull(ZonaEnvio::paraCodigoPostal('123456'));
+
+        $response = $this->getJson('/ed/pedido/costo/91000');
+        $response->assertStatus(422);
+    }
 }
