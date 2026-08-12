@@ -46,7 +46,7 @@ class ReconciliarMercadoPago extends Command
             return 1;
         }
 
-        $pedidosPendientes = Pedido::where('estado', 'pendiente')->orderBy('id')->get();
+        $pedidosPendientes = Pedido::where('estado_pago', 'pendiente')->orderBy('id')->get();
         $totalPendientes = $pedidosPendientes->count();
 
         $this->info("Se encontraron {$totalPendientes} pedidos en estado 'pendiente'.");
@@ -104,11 +104,11 @@ class ReconciliarMercadoPago extends Command
                         DB::beginTransaction();
                         try {
                             $pedidoLock = Pedido::where('id', $pedido->id)->lockForUpdate()->first();
-                            if ($pedidoLock && $pedidoLock->estado === 'pendiente') {
-                                $estadoAnterior = $pedidoLock->estado;
-                                $pedidoLock->estado = 'pagado';
+                            if ($pedidoLock && $pedidoLock->estado_pago === 'pendiente') {
+                                $estadoAnterior = $pedidoLock->estado_pago;
                                 $pedidoLock->mercado_pago_id = $paymentId;
                                 $pedidoLock->save();
+                                $pedidoLock->cambiarEstadoPago('pagado', 'comando');
 
                                 Log::info("Reconciliación MercadoPago: Pedido {$pedidoLock->id} actualizado de {$estadoAnterior} a pagado", [
                                     'pedido_id' => $pedidoLock->id,

@@ -39,8 +39,8 @@ class LiberarPedidosVencidos extends Command
         $legacyHours = config('mercadopago.legacy_expiration_hours', 96);
         $legacyThreshold = $now->copy()->subHours($legacyHours);
 
-        // Buscar pedidos con estado 'pendiente'
-        $pedidos = Pedido::where('estado', 'pendiente')
+        // Buscar pedidos con estado_pago 'pendiente'
+        $pedidos = Pedido::where('estado_pago', 'pendiente')
             ->where(function ($query) use ($now, $legacyThreshold) {
                 $query->whereNotNull('expira_at')
                       ->where('expira_at', '<=', $now)
@@ -105,9 +105,8 @@ class LiberarPedidosVencidos extends Command
                 $pedidoParaCancelar = Pedido::where('id', $pedido->id)->lockForUpdate()->first();
 
                 // Verificar de nuevo el estado por si cambió concurrentemente
-                if ($pedidoParaCancelar && $pedidoParaCancelar->estado === 'pendiente') {
-                    $pedidoParaCancelar->estado = 'cancelado';
-                    $pedidoParaCancelar->save();
+                if ($pedidoParaCancelar && $pedidoParaCancelar->estado_pago === 'pendiente') {
+                    $pedidoParaCancelar->cambiarEstadoPago('expirado', 'comando');
 
                     $detalles = DetallePedido::where('pedido_id', $pedido->id)->get();
                     $detallesStockRepuesto = [];

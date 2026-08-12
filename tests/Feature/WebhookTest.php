@@ -367,4 +367,105 @@ class WebhookTest extends TestCase
         $response->assertStatus(200);
         $response->assertJson(['message' => 'Pago no encontrado en MercadoPago']);
     }
+
+    /** @test */
+    public function guard_de_pagado_con_data_id_distinto_sigue_funcionando()
+    {
+        $pedido = Pedido::factory()->create([
+            'estado_pago'     => 'pagado',
+            'mercado_pago_id' => '111111',
+        ]);
+
+        $paymentId = '999999';
+        $requestId = 'req_id_diff';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentId, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId}" => Http::response([
+                'status'             => 'rejected',
+                'external_reference' => (string)$pedido->id,
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId . '&type=payment', [], [
+            'x-signature'  => $signature,
+            'x-request-id' => $requestId,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('pagado', $pedido->fresh()->estado_pago);
+        $this->assertEquals('111111', $pedido->fresh()->mercado_pago_id);
+    }
+
+    /** @test */
+    public function un_pago_aprobado_genera_historial_con_origen_webhook()
+    {
+        $pedido = Pedido::factory()->create(['estado_pago' => 'pendiente']);
+
+        $paymentId = '888888';
+        $requestId = 'req_id_hist';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentId, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId}" => Http::response([
+                'status'             => 'approved',
+                'external_reference' => (string)$pedido->id,
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId . '&type=payment', [], [
+            'x-signature'  => $signature,
+            'x-request-id' => $requestId,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('pagado', $pedido->fresh()->estado_pago);
+
+        $this->assertDatabaseHas('pedido_historial_estados', [
+            'pedido_id'    => $pedido->id,
+            'tipo'         => 'pago',
+            'estado_nuevo' => 'pagado',
+            'origen'       => 'webhook',
+        ]);
+    }
+
+    /** @test */
+    public function pedido_pagado_con_mismo_payment_id_recibe_rejected_es_ignorado_y_mantiene_stock()
+    {
+        $producto = Producto::factory()->create(['stock' => 5]);
+        $pedido = Pedido::factory()->create([
+            'estado_pago'     => 'pagado',
+            'mercado_pago_id' => '777777',
+        ]);
+        DetallePedido::create([
+            'pedido_id'       => $pedido->id,
+            'producto_id'     => $producto->id,
+            'cantidad'        => 2,
+            'precio_unitario' => 100,
+        ]);
+
+        $paymentId = '777777';
+        $requestId = 'req_id_same_rej';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentId, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId}" => Http::response([
+                'status'             => 'rejected',
+                'external_reference' => (string)$pedido->id,
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId . '&type=payment', [], [
+            'x-signature'  => $signature,
+            'x-request-id' => $requestId,
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('pagado', $pedido->fresh()->estado_pago);
+        $this->assertEquals('777777', $pedido->fresh()->mercado_pago_id);
+        $this->assertEquals(5, $producto->fresh()->stock); // Stock intacto
+    }
 }

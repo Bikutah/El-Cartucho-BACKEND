@@ -397,7 +397,7 @@ class ZonaEnvioTest extends TestCase
         $this->assertNull(ZonaEnvio::paraCodigoPostal('12'));
 
         $response = $this->getJson('/ed/pedido/costo/12');
-        $response->assertStatus(422);
+        $response->assertStatus(418);
     }
 
     /** @test */
@@ -417,5 +417,24 @@ class ZonaEnvioTest extends TestCase
 
         $response = $this->getJson('/ed/pedido/costo/91000');
         $response->assertStatus(422);
+    }
+
+    /** @test */
+    public function test_14_cp_valid_length_4_digits_without_matching_zone_returns_422()
+    {
+        ZonaEnvio::create([
+            'nombre'   => 'CABA',
+            'cp_desde' => 1000,
+            'cp_hasta' => 1999,
+            'costo'    => 3000,
+            'activa'   => true,
+            'orden'    => 0,
+        ]);
+
+        $this->assertNull(ZonaEnvio::paraCodigoPostal('5000'));
+
+        $response = $this->getJson('/ed/pedido/costo/5000');
+        $response->assertStatus(422);
+        $response->assertJson(['error' => 'No realizamos envíos a ese código postal']);
     }
 }

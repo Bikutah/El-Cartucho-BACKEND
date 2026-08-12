@@ -8,7 +8,8 @@
     $columnas = [
         ['label' => 'ID'],
         ['label' => 'Cliente'],
-        ['label' => 'Estado'],
+        ['label' => 'Pago'],
+        ['label' => 'Envío'],
         ['label' => 'Total'],
         ['label' => 'Fecha'],
         ['label' => 'Productos'],

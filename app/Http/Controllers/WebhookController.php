@@ -61,11 +61,12 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Pago sin referencia de pedido'], 200);
         }
 
-        $targetState = match ($status) {
-            'approved' => 'pagado',
-            'rejected', 'cancelled', 'refunded', 'charged_back' => 'cancelado',
+        $targetStatePago = match ($status) {
+            'approved'                                           => 'pagado',
+            'rejected', 'cancelled'                             => 'rechazado',
+            'refunded', 'charged_back'                          => 'reembolsado',
             'pending', 'in_process', 'authorized', 'in_mediation' => 'pendiente',
-            default => null,
+            default                                              => null,
         };
 
         // 4. Transacción de actualización de pedido y stock con idempotencia y guards de transición
@@ -79,36 +80,36 @@ class WebhookController extends Controller
                 return response()->json(['error' => 'Pedido no encontrado'], 404);
             }
 
-            // Idempotencia: Si ya tiene el mismo mercado_pago_id y el mismo estado -> responder 200 sin escribir
-            if ($pedido->mercado_pago_id === (string)$dataId && $pedido->estado === $targetState) {
+            // Idempotencia: Si ya tiene el mismo mercado_pago_id y el mismo estado_pago -> responder 200 sin escribir
+            if ($pedido->mercado_pago_id === (string)$dataId && $pedido->estado_pago === $targetStatePago) {
                 DB::commit();
                 return response()->json(['message' => 'Notificación duplicada ya procesada'], 200);
             }
 
             // Guards de transiciones válidas:
-            // 1) Desde 'cancelado' no se sale bajo ninguna circunstancia (y NO sobrescribir mercado_pago_id)
-            if ($pedido->estado === 'cancelado') {
+            // 1) Desde estados terminales de pago (rechazado, expirado, reembolsado) no se sale bajo ninguna circunstancia
+            if (in_array($pedido->estado_pago, ['rechazado', 'expirado', 'reembolsado'], true)) {
                 DB::commit();
-                Log::warning("Transición de estado ignorada para pedido cancelado #{$pedido->id}.", [
-                    'pedido_id' => $pedido->id,
-                    'estado_actual' => 'cancelado',
+                Log::warning("Transición de estado ignorada para pedido en estado final #{$pedido->id}.", [
+                    'pedido_id'     => $pedido->id,
+                    'estado_actual' => $pedido->estado_pago,
                     'estado_evento' => $status,
-                    'payment_id' => $dataId,
+                    'payment_id'    => $dataId,
                 ]);
                 return response()->json(['message' => 'Transición no permitida desde cancelado'], 200);
             }
 
-            // 2) Desde 'pagado' solo se permite pasar a 'cancelado' si $dataId coincide con mercado_pago_id del pedido y el status es refunded, charged_back o cancelled
-            if ($pedido->estado === 'pagado') {
+            // 2) Desde 'pagado' solo se permite pasar a 'reembolsado' o 'rechazado' si $dataId coincide con mercado_pago_id del pedido
+            if ($pedido->estado_pago === 'pagado') {
                 $esMismoPago = ($pedido->mercado_pago_id !== null && (string)$pedido->mercado_pago_id === (string)$dataId);
                 $esReembolsoValido = $esMismoPago && in_array($status, ['refunded', 'charged_back', 'cancelled']);
 
                 if (!$esReembolsoValido) {
                     DB::commit();
                     Log::warning("Notificación de pago ignorada para pedido ya pagado #{$pedido->id}.", [
-                        'pedido_id' => $pedido->id,
-                        'estado_actual' => 'pagado',
-                        'estado_evento' => $status,
+                        'pedido_id'         => $pedido->id,
+                        'estado_actual'     => 'pagado',
+                        'estado_evento'     => $status,
                         'payment_id_actual' => $pedido->mercado_pago_id,
                         'payment_id_evento' => $dataId,
                     ]);
@@ -118,18 +119,17 @@ class WebhookController extends Controller
 
             // Actualizar mercado_pago_id SOLO tras superar guards válidos
             $pedido->mercado_pago_id = (string)$dataId;
+            $pedido->save();
 
             // Procesar cambio de estado
-            if ($targetState === 'pagado') {
-                if ($pedido->estado !== 'pagado') {
-                    $pedido->estado = 'pagado';
-                    $pedido->save();
-                    Log::info("Pedido {$pedido->id} actualizado a estado: pagado");
+            if ($targetStatePago === 'pagado') {
+                if ($pedido->estado_pago !== 'pagado') {
+                    $pedido->cambiarEstadoPago('pagado', 'webhook');
+                    Log::info("Pedido {$pedido->id} actualizado a estado_pago: pagado");
                 }
-            } elseif ($targetState === 'cancelado') {
-                if ($pedido->estado !== 'cancelado') {
-                    $pedido->estado = 'cancelado';
-                    $pedido->save();
+            } elseif (in_array($targetStatePago, ['rechazado', 'reembolsado'], true)) {
+                if ($pedido->estado_pago !== $targetStatePago) {
+                    $pedido->cambiarEstadoPago($targetStatePago, 'webhook');
 
                     // Reponer el stock
                     $detalles = DetallePedido::where('pedido_id', $pedido->id)->get();
@@ -140,17 +140,15 @@ class WebhookController extends Controller
                             $producto->save();
                         }
                     }
-                    Log::info("Pedido {$pedido->id} actualizado a estado: cancelado (Pago fallido/reembolsado: {$status}). Stock repuesto.");
+                    Log::info("Pedido {$pedido->id} actualizado a estado_pago: {$targetStatePago} (Pago fallido/reembolsado: {$status}). Stock repuesto.");
                 }
-            } elseif ($targetState === 'pendiente') {
-                if ($pedido->estado !== 'pendiente') {
-                    $pedido->estado = 'pendiente';
-                    $pedido->save();
-                    Log::info("Pedido {$pedido->id} actualizado a estado: pendiente");
+            } elseif ($targetStatePago === 'pendiente') {
+                if ($pedido->estado_pago !== 'pendiente') {
+                    $pedido->cambiarEstadoPago('pendiente', 'webhook');
+                    Log::info("Pedido {$pedido->id} actualizado a estado_pago: pendiente");
                 }
             } else {
                 Log::info("Webhook MercadoPago - Pago {$dataId} para pedido {$pedido->id} con estado no mapeado: {$status}");
-                $pedido->save();
             }
 
             DB::commit();

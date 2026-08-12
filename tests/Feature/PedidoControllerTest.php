@@ -85,6 +85,7 @@ class PedidoControllerTest extends TestCase
 
         $response = $this->withHeaders($this->tokenHeader())
             ->postJson('/ed/pedido/crear', [
+                'codigo_postal' => '9000',
                 'productos' => [
                     [
                         'producto_id' => $producto->id,
@@ -106,6 +107,7 @@ class PedidoControllerTest extends TestCase
         // Primer pedido por el único elemento
         $response1 = $this->withHeaders($this->tokenHeader())
             ->postJson('/ed/pedido/crear', [
+                'codigo_postal' => '9000',
                 'productos' => [
                     [
                         'producto_id' => $producto->id,
@@ -120,6 +122,7 @@ class PedidoControllerTest extends TestCase
         // Segundo pedido concurrente (ya no hay stock)
         $response2 = $this->withHeaders($this->tokenHeader())
             ->postJson('/ed/pedido/crear', [
+                'codigo_postal' => '9000',
                 'productos' => [
                     [
                         'producto_id' => $producto->id,
@@ -323,5 +326,60 @@ class PedidoControllerTest extends TestCase
             }
             return true;
         });
+    }
+
+    /** @test */
+    public function la_preferencia_enviada_a_mercadopago_incluye_expires_y_expiration_date_to()
+    {
+        $producto = Producto::factory()->create(['stock' => 5, 'precioUnitario' => 100.0]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'productos' => [
+                    [
+                        'producto_id' => $producto->id,
+                        'cantidad'    => 1,
+                    ]
+                ],
+                'email'         => 'test@ejemplo.com',
+                'codigo_postal' => '1234',
+            ]);
+
+        $response->assertStatus(201);
+
+        Http::assertSent(function ($request) {
+            if ($request->url() === 'https://api.mercadopago.com/checkout/preferences') {
+                $data = json_decode($request->body(), true);
+                return isset($data['expires']) && $data['expires'] === true && isset($data['expiration_date_to']);
+            }
+            return true;
+        });
+    }
+
+    /** @test */
+    public function la_respuesta_de_store_incluye_la_clave_mercado_pago_url()
+    {
+        $producto = Producto::factory()->create(['stock' => 5, 'precioUnitario' => 100.0]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'productos' => [
+                    [
+                        'producto_id' => $producto->id,
+                        'cantidad'    => 1,
+                    ]
+                ],
+                'email'         => 'test@ejemplo.com',
+                'codigo_postal' => '1234',
+            ]);
+
+        $response->assertStatus(201);
+        $response->assertJsonStructure([
+            'pedido_id',
+            'mercado_pago_url',
+            'mercado_pago_id',
+            'mercado_pago_preference_id',
+        ]);
+        $this->assertEquals('https://mercadopago.com/checkout/pay', $response->json('mercado_pago_url'));
     }
 }
