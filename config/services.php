@@ -40,6 +40,7 @@ return [
         'webhook_secret' => env('WEBHOOK_SECRET_TOKEN'),
         'front_url' => env('FRONT_URL'),
         'reserva_minutos' => (int) env('PEDIDO_RESERVA_MINUTOS', 20),
+        'cron_secret' => env('CRON_SECRET'),
     ],
 
 ];

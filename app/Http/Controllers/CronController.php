@@ -14,7 +14,7 @@ class CronController extends Controller
      */
     public function liberarPedidosVencidos(Request $request)
     {
-        $secret = config('services.mercadopago.cron_secret', env('CRON_SECRET'));
+        $secret = config('services.mercadopago.cron_secret');
         $authHeader = $request->header('Authorization') ?? '';
 
         if (empty($secret) || empty($authHeader) || !str_starts_with($authHeader, 'Bearer ')) {

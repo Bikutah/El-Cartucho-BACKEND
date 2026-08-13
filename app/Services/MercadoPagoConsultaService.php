@@ -48,14 +48,14 @@ class MercadoPagoConsultaService
                     Log::error("MercadoPagoConsultaService: Error HTTP {$response->status()} al consultar pago {$pedido->mercado_pago_id}", [
                         'pedido_id' => $pedido->id,
                     ]);
-                    return true;
+                    return true; // Ante error de API distinto de 404, por seguridad NO cancelar
                 }
             } catch (\Exception $e) {
                 Log::error("MercadoPagoConsultaService: Excepción al consultar pago {$pedido->mercado_pago_id}", [
                     'pedido_id' => $pedido->id,
                     'error'     => $e->getMessage(),
                 ]);
-                return true;
+                return true; // Ante excepción de red, por seguridad NO cancelar
             }
         }
 
@@ -83,9 +83,18 @@ class MercadoPagoConsultaService
                         return true;
                     }
                 }
+            } elseif ($searchResponse->status() !== 404) {
+                Log::error("MercadoPagoConsultaService: Error HTTP {$searchResponse->status()} al buscar pagos por external_reference", [
+                    'pedido_id' => $pedido->id,
+                ]);
+                return true; // Ante error de API distinto de 404, por seguridad NO cancelar
             }
         } catch (\Exception $e) {
-            // Error en búsqueda sin mercado_pago_id -> omitir
+            Log::error("MercadoPagoConsultaService: Excepción al buscar pagos por external_reference", [
+                'pedido_id' => $pedido->id,
+                'error'     => $e->getMessage(),
+            ]);
+            return true; // Ante excepción de red, por seguridad NO cancelar
         }
 
         return false;
