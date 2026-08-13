@@ -16,5 +16,6 @@
         "src": "/(.*)",
         "dest": "api/index.php"
       }
-    ]
+    ],
+    "_comment_crons": "Cron /ed/cron/liberar-vencidos pendiente de activacion y definicion de frecuencia segun plan de Vercel"
   }

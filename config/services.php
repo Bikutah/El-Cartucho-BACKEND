@@ -39,6 +39,7 @@ return [
         'access_token' => env('MERCADO_PAGO_ACCESS_TOKEN'),
         'webhook_secret' => env('WEBHOOK_SECRET_TOKEN'),
         'front_url' => env('FRONT_URL'),
+        'reserva_minutos' => (int) env('PEDIDO_RESERVA_MINUTOS', 20),
     ],
 
 ];

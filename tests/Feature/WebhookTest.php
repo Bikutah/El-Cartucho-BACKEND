@@ -161,7 +161,7 @@ class WebhookTest extends TestCase
     public function test_5b_repeated_rejected_notification_returns_200_without_duplicate_stock_restoration()
     {
         $producto = Producto::factory()->create(['stock' => 10]);
-        $pedido = Pedido::factory()->create(['estado' => 'pendiente']);
+        $pedido = Pedido::factory()->create(['estado_pago' => 'pendiente']);
 
         DetallePedido::create([
             'pedido_id' => $pedido->id,
@@ -182,32 +182,96 @@ class WebhookTest extends TestCase
             ], 200)
         ]);
 
-        // Primer envío
+        // Primer envío: rejected sobre pedido pendiente
         $res1 = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId . '&type=payment', [], [
             'x-signature' => $signature,
             'x-request-id' => $requestId
         ]);
         $res1->assertStatus(200);
-        $this->assertEquals('cancelado', $pedido->fresh()->estado);
-        // Stock repuesto una vez: 10 + 3 = 13
-        $this->assertEquals(13, $producto->fresh()->stock);
+        $this->assertEquals('pendiente', $pedido->fresh()->estado_pago);
+        // Stock intacto: no se modifica
+        $this->assertEquals(10, $producto->fresh()->stock);
 
-        // Segundo envío
+        // Se creó registro en el historial
+        $this->assertDatabaseHas('pedido_historial_estados', [
+            'pedido_id' => $pedido->id,
+            'origen'    => 'webhook',
+        ]);
+
+        // Segundo envío: duplicado
         $res2 = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId . '&type=payment', [], [
             'x-signature' => $signature,
             'x-request-id' => $requestId
         ]);
         $res2->assertStatus(200);
         $res2->assertJson(['message' => 'Notificación duplicada ya procesada']);
-        // Stock no debe reponerse por segunda vez
-        $this->assertEquals(13, $producto->fresh()->stock);
+        $this->assertEquals('pendiente', $pedido->fresh()->estado_pago);
+        $this->assertEquals(10, $producto->fresh()->stock);
+    }
+
+    /** @test */
+    public function rejected_seguido_de_approved_con_distintos_payment_ids_termina_pagado()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create(['estado_pago' => 'pendiente']);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 2,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $paymentId1 = '111111111';
+        $requestId1 = 'req_id_rej_1';
+        $ts1 = time();
+        $signature1 = $this->getSignatureHeader($paymentId1, $requestId1, $ts1);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId1}" => Http::response([
+                'status' => 'rejected',
+                'external_reference' => (string)$pedido->id
+            ], 200)
+        ]);
+
+        // 1. Webhook de pago #1 rechazado
+        $res1 = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId1 . '&type=payment', [], [
+            'x-signature'  => $signature1,
+            'x-request-id' => $requestId1
+        ]);
+        $res1->assertStatus(200);
+        $this->assertEquals('pendiente', $pedido->fresh()->estado_pago);
+        $this->assertEquals(10, $producto->fresh()->stock);
+
+        // 2. Webhook de pago #2 aprobado
+        $paymentId2 = '222222222';
+        $requestId2 = 'req_id_app_2';
+        $ts2 = time() + 1;
+        $signature2 = $this->getSignatureHeader($paymentId2, $requestId2, $ts2);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentId2}" => Http::response([
+                'status' => 'approved',
+                'external_reference' => (string)$pedido->id
+            ], 200)
+        ]);
+
+        $res2 = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId2 . '&type=payment', [], [
+            'x-signature'  => $signature2,
+            'x-request-id' => $requestId2
+        ]);
+        $res2->assertStatus(200);
+
+        // El pedido debe terminar pagado
+        $this->assertEquals('pagado', $pedido->fresh()->estado_pago);
+        $this->assertEquals($paymentId2, $pedido->fresh()->mercado_pago_id);
     }
 
     /** @test */
     public function test_5c_late_approved_notification_for_cancelled_order_is_ignored()
     {
         $producto = Producto::factory()->create(['stock' => 10]);
-        $pedido = Pedido::factory()->create(['estado' => 'cancelado', 'mercado_pago_id' => null]);
+        $pedido = Pedido::factory()->create(['estado_pago' => 'expirado', 'estado' => 'cancelado', 'mercado_pago_id' => null]);
 
         DetallePedido::create([
             'pedido_id' => $pedido->id,
@@ -235,9 +299,7 @@ class WebhookTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson(['message' => 'Transición no permitida desde cancelado']);
-        // Debe permanecer cancelado
-        $this->assertEquals('cancelado', $pedido->fresh()->estado);
-        // mercado_pago_id no debe ser sobrescrito
+        $this->assertEquals('expirado', $pedido->fresh()->estado_pago);
         $this->assertNull($pedido->fresh()->mercado_pago_id);
     }
 
@@ -246,7 +308,8 @@ class WebhookTest extends TestCase
     {
         $producto = Producto::factory()->create(['stock' => 10]);
         $pedido = Pedido::factory()->create([
-            'estado' => 'pagado',
+            'estado_pago'     => 'pagado',
+            'estado'          => 'pagado',
             'mercado_pago_id' => 'payment_A'
         ]);
 
@@ -276,20 +339,19 @@ class WebhookTest extends TestCase
 
         $response->assertStatus(200);
         $response->assertJson(['message' => 'Transición no permitida desde pagado para este pago']);
-        // Permanece pagado y mercado_pago_id sigue siendo payment_A
-        $this->assertEquals('pagado', $pedido->fresh()->estado);
+        $this->assertEquals('pagado', $pedido->fresh()->estado_pago);
         $this->assertEquals('payment_A', $pedido->fresh()->mercado_pago_id);
-        // El stock no se altera
         $this->assertEquals(10, $producto->fresh()->stock);
     }
 
     /** @test */
-    public function test_5e_refunded_notification_for_matching_payment_on_paid_order_transitions_to_cancelled_and_restores_stock()
+    public function refunded_con_estado_envio_sin_preparar_reponed_stock()
     {
         $producto = Producto::factory()->create(['stock' => 10]);
         $paymentA = 'payment_A';
         $pedido = Pedido::factory()->create([
-            'estado' => 'pagado',
+            'estado_pago'     => 'pagado',
+            'estado_envio'    => 'sin_preparar',
             'mercado_pago_id' => $paymentA
         ]);
 
@@ -300,7 +362,7 @@ class WebhookTest extends TestCase
             'precio_unitario' => $producto->precioUnitario
         ]);
 
-        $requestId = 'req_id_refund';
+        $requestId = 'req_id_refund_sin_prep';
         $ts = time();
         $signature = $this->getSignatureHeader($paymentA, $requestId, $ts);
 
@@ -317,10 +379,56 @@ class WebhookTest extends TestCase
         ]);
 
         $response->assertStatus(200);
-        $this->assertEquals('cancelado', $pedido->fresh()->estado);
-        $this->assertEquals($paymentA, $pedido->fresh()->mercado_pago_id);
+        $this->assertEquals('reembolsado', $pedido->fresh()->estado_pago);
         // Stock repuesto: 10 + 4 = 14
         $this->assertEquals(14, $producto->fresh()->stock);
+    }
+
+    /** @test */
+    public function refunded_con_estado_envio_enviado_no_reponed_stock_y_cambia_estado_pago()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $paymentA = 'payment_A';
+        $pedido = Pedido::factory()->create([
+            'estado_pago'     => 'pagado',
+            'estado_envio'    => 'enviado',
+            'mercado_pago_id' => $paymentA
+        ]);
+
+        DetallePedido::create([
+            'pedido_id' => $pedido->id,
+            'producto_id' => $producto->id,
+            'cantidad' => 4,
+            'precio_unitario' => $producto->precioUnitario
+        ]);
+
+        $requestId = 'req_id_refund_enviado';
+        $ts = time();
+        $signature = $this->getSignatureHeader($paymentA, $requestId, $ts);
+
+        Http::fake([
+            "api.mercadopago.com/v1/payments/{$paymentA}" => Http::response([
+                'status' => 'refunded',
+                'external_reference' => (string)$pedido->id
+            ], 200)
+        ]);
+
+        $response = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentA . '&type=payment', [], [
+            'x-signature' => $signature,
+            'x-request-id' => $requestId
+        ]);
+
+        $response->assertStatus(200);
+        $this->assertEquals('reembolsado', $pedido->fresh()->estado_pago);
+        // Stock NO repuesto: permanece 10
+        $this->assertEquals(10, $producto->fresh()->stock);
+
+        // Se registró en historial con observacion de reembolso sin reposición
+        $this->assertDatabaseHas('pedido_historial_estados', [
+            'pedido_id'   => $pedido->id,
+            'estado_nuevo' => 'reembolsado',
+            'observacion' => 'reembolso_sin_reposicion',
+        ]);
     }
 
     /** @test */

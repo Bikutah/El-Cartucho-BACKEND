@@ -61,9 +61,75 @@ class WebhookController extends Controller
             return response()->json(['message' => 'Pago sin referencia de pedido'], 200);
         }
 
+        // Manejo de intentos rechazados / cancelados (no cambian estado_pago, no tocan stock)
+        if (in_array($status, ['rejected', 'cancelled'], true)) {
+            DB::beginTransaction();
+            try {
+                $pedido = Pedido::where('id', $pedidoId)->lockForUpdate()->first();
+
+                if (!$pedido) {
+                    DB::rollBack();
+                    Log::warning("Pedido no encontrado con ID externo: {$pedidoId}");
+                    return response()->json(['error' => 'Pedido no encontrado'], 404);
+                }
+
+                // Guard: si el pedido ya está en estado final (rechazado, expirado, reembolsado)
+                if (in_array($pedido->estado_pago, ['rechazado', 'expirado', 'reembolsado'], true)) {
+                    DB::commit();
+                    Log::warning("Notificación rejected/cancelled ignorada para pedido en estado final #{$pedido->id}.", [
+                        'pedido_id'     => $pedido->id,
+                        'estado_actual' => $pedido->estado_pago,
+                        'payment_id'    => $dataId,
+                    ]);
+                    return response()->json(['message' => 'Transición no permitida desde cancelado'], 200);
+                }
+
+                // Guard: si el pedido ya está pagado
+                if ($pedido->estado_pago === 'pagado') {
+                    DB::commit();
+                    Log::warning("Notificación rejected/cancelled ignorada para pedido ya pagado #{$pedido->id}.", [
+                        'pedido_id'         => $pedido->id,
+                        'payment_id_evento' => $dataId,
+                    ]);
+                    return response()->json(['message' => 'Transición no permitida desde pagado para este pago'], 200);
+                }
+
+                // Idempotencia: Verificar si este intento ya fue registrado en el historial para este dataId
+                $yaRegistrado = \App\Models\PedidoHistorialEstado::where('pedido_id', $pedido->id)
+                    ->where('observacion', 'like', "%{$dataId}%")
+                    ->exists();
+
+                if ($yaRegistrado) {
+                    DB::commit();
+                    return response()->json(['message' => 'Notificación duplicada ya procesada'], 200);
+                }
+
+                // Registrar intento fallido en historial sin cambiar estado_pago ni tocar stock
+                \App\Models\PedidoHistorialEstado::create([
+                    'pedido_id'       => $pedido->id,
+                    'tipo'            => 'pago',
+                    'estado_anterior' => $pedido->estado_pago,
+                    'estado_nuevo'    => $pedido->estado_pago,
+                    'user_id'         => null,
+                    'origen'          => 'webhook',
+                    'observacion'     => "intento_rechazado: Intento de pago {$status} (Payment ID: {$dataId})",
+                    'created_at'      => now(),
+                ]);
+
+                DB::commit();
+                Log::info("Intento de pago {$status} registrado para pedido #{$pedido->id} (Payment ID: {$dataId}). Estado permanece: {$pedido->estado_pago}.");
+                return response()->json(['message' => 'OK'], 200);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                Log::error("Error al procesar intento rechazado para pedido {$pedidoId}", [
+                    'error' => $e->getMessage()
+                ]);
+                return response()->json(['error' => 'Error interno al procesar el pago'], 500);
+            }
+        }
+
         $targetStatePago = match ($status) {
             'approved'                                           => 'pagado',
-            'rejected', 'cancelled'                             => 'rechazado',
             'refunded', 'charged_back'                          => 'reembolsado',
             'pending', 'in_process', 'authorized', 'in_mediation' => 'pendiente',
             default                                              => null,
@@ -99,10 +165,10 @@ class WebhookController extends Controller
                 return response()->json(['message' => 'Transición no permitida desde cancelado'], 200);
             }
 
-            // 2) Desde 'pagado' solo se permite pasar a 'reembolsado' o 'rechazado' si $dataId coincide con mercado_pago_id del pedido
+            // 2) Desde 'pagado' solo se permite pasar a 'reembolsado' si $dataId coincide con mercado_pago_id del pedido
             if ($pedido->estado_pago === 'pagado') {
                 $esMismoPago = ($pedido->mercado_pago_id !== null && (string)$pedido->mercado_pago_id === (string)$dataId);
-                $esReembolsoValido = $esMismoPago && in_array($status, ['refunded', 'charged_back', 'cancelled']);
+                $esReembolsoValido = $esMismoPago && in_array($status, ['refunded', 'charged_back']);
 
                 if (!$esReembolsoValido) {
                     DB::commit();
@@ -127,20 +193,32 @@ class WebhookController extends Controller
                     $pedido->cambiarEstadoPago('pagado', 'webhook');
                     Log::info("Pedido {$pedido->id} actualizado a estado_pago: pagado");
                 }
-            } elseif (in_array($targetStatePago, ['rechazado', 'reembolsado'], true)) {
-                if ($pedido->estado_pago !== $targetStatePago) {
-                    $pedido->cambiarEstadoPago($targetStatePago, 'webhook');
+            } elseif ($targetStatePago === 'reembolsado') {
+                if ($pedido->estado_pago !== 'reembolsado') {
+                    $estadoEnvio = $pedido->estado_envio;
+                    $reponerStock = ($estadoEnvio === null || in_array($estadoEnvio, ['sin_preparar', 'preparando'], true));
 
-                    // Reponer el stock
-                    $detalles = DetallePedido::where('pedido_id', $pedido->id)->get();
-                    foreach ($detalles as $detalle) {
-                        $producto = Producto::where('id', $detalle->producto_id)->lockForUpdate()->first();
-                        if ($producto) {
-                            $producto->stock += $detalle->cantidad;
-                            $producto->save();
+                    if ($reponerStock) {
+                        $pedido->cambiarEstadoPago('reembolsado', 'webhook');
+                        // Reponer el stock
+                        $detalles = DetallePedido::where('pedido_id', $pedido->id)->get();
+                        foreach ($detalles as $detalle) {
+                            $producto = Producto::where('id', $detalle->producto_id)->lockForUpdate()->first();
+                            if ($producto) {
+                                $producto->stock += $detalle->cantidad;
+                                $producto->save();
+                            }
                         }
+                        Log::info("Pedido {$pedido->id} actualizado a estado_pago: reembolsado. Stock repuesto (estado_envio: {$estadoEnvio}).");
+                    } else {
+                        // Si ya fue enviado, entregado o devuelto: NO tocar stock
+                        $pedido->cambiarEstadoPago('reembolsado', 'webhook', null, 'reembolso_sin_reposicion');
+                        Log::warning("Reembolso procesado para Pedido #{$pedido->id} sin reposición de stock (estado_envio: {$estadoEnvio}).", [
+                            'pedido_id'    => $pedido->id,
+                            'estado_envio' => $estadoEnvio,
+                            'payment_id'   => $dataId,
+                        ]);
                     }
-                    Log::info("Pedido {$pedido->id} actualizado a estado_pago: {$targetStatePago} (Pago fallido/reembolsado: {$status}). Stock repuesto.");
                 }
             } elseif ($targetStatePago === 'pendiente') {
                 if ($pedido->estado_pago !== 'pendiente') {

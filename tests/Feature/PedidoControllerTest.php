@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Producto;
+use App\Models\Pedido;
 use App\Models\User;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -381,5 +382,68 @@ class PedidoControllerTest extends TestCase
             'mercado_pago_preference_id',
         ]);
         $this->assertEquals('https://mercadopago.com/checkout/pay', $response->json('mercado_pago_url'));
+    }
+
+    /** @test */
+    public function la_preferencia_incluye_binary_mode_y_excluye_ticket_y_atm()
+    {
+        $producto = Producto::factory()->create(['stock' => 5, 'precioUnitario' => 100.0]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'productos' => [
+                    [
+                        'producto_id' => $producto->id,
+                        'cantidad'    => 1,
+                    ]
+                ],
+                'email'         => 'test@ejemplo.com',
+                'codigo_postal' => '1234',
+            ]);
+
+        $response->assertStatus(201);
+
+        Http::assertSent(function ($request) {
+            if ($request->url() === 'https://api.mercadopago.com/checkout/preferences') {
+                $data = json_decode($request->body(), true);
+                $binaryMode = isset($data['binary_mode']) && $data['binary_mode'] === true;
+                $excludedTypes = $data['payment_methods']['excluded_payment_types'] ?? [];
+                $hasTicket = false;
+                $hasAtm = false;
+                foreach ($excludedTypes as $item) {
+                    if (($item['id'] ?? '') === 'ticket') $hasTicket = true;
+                    if (($item['id'] ?? '') === 'atm') $hasAtm = true;
+                }
+                return $binaryMode && $hasTicket && $hasAtm;
+            }
+            return true;
+        });
+    }
+
+    /** @test */
+    public function expira_at_queda_a_20_minutos_de_la_creacion()
+    {
+        $producto = Producto::factory()->create(['stock' => 5, 'precioUnitario' => 100.0]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'productos' => [
+                    [
+                        'producto_id' => $producto->id,
+                        'cantidad'    => 1,
+                    ]
+                ],
+                'email'         => 'test@ejemplo.com',
+                'codigo_postal' => '1234',
+            ]);
+
+        $response->assertStatus(201);
+        $pedidoId = $response->json('pedido_id');
+        $pedido = Pedido::find($pedidoId);
+
+        $this->assertNotNull($pedido->expira_at);
+        $diffInMinutes = now()->diffInMinutes($pedido->expira_at, false);
+        $this->assertGreaterThanOrEqual(19, $diffInMinutes);
+        $this->assertLessThanOrEqual(21, $diffInMinutes);
     }
 }

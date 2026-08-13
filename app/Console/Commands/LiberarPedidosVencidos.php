@@ -11,6 +11,8 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Carbon\Carbon;
 
+use App\Services\MercadoPagoConsultaService;
+
 class LiberarPedidosVencidos extends Command
 {
     /**
@@ -30,7 +32,7 @@ class LiberarPedidosVencidos extends Command
     /**
      * Execute the console command.
      */
-    public function handle()
+    public function handle(MercadoPagoConsultaService $mpConsultaService)
     {
         $this->info('Iniciando proceso de liberación de pedidos vencidos...');
         Log::info('LiberarPedidosVencidos: Iniciando proceso...');
@@ -61,41 +63,10 @@ class LiberarPedidosVencidos extends Command
                 ? $pedido->expira_at->toIso8601String() 
                 : $pedido->created_at->addHours($legacyHours)->toIso8601String() . " (Legacy Fallback)";
 
-            // Si tiene mercado_pago_id, verificar contra la API de MercadoPago
-            if ($pedido->mercado_pago_id) {
-                try {
-                    $response = Http::timeout(5)->withToken(config('services.mercadopago.access_token'))
-                        ->get("https://api.mercadopago.com/v1/payments/{$pedido->mercado_pago_id}");
-
-                    if ($response->successful()) {
-                        $paymentData = $response->json();
-                        $mpStatus = $paymentData['status'] ?? 'unknown';
-                        $dateOfExpiration = isset($paymentData['date_of_expiration']) 
-                            ? Carbon::parse($paymentData['date_of_expiration']) 
-                            : null;
-
-                        // Si el pago sigue pendiente en MP y su fecha de vencimiento NO ha pasado, NO cancelamos
-                        if ($mpStatus === 'pending' && $dateOfExpiration && $dateOfExpiration->isFuture()) {
-                            $this->line("Pedido #{$pedido->id} sigue pendiente y no venció en MercadoPago (Vence: {$dateOfExpiration->toIso8601String()}). Omitiendo.");
-                            continue;
-                        }
-                    } elseif ($response->status() !== 404) {
-                        // Si falla la API con un error distinto a 404 (ej. 500 o timeout), omitimos el pedido por seguridad
-                        $this->warn("Error al consultar pago {$pedido->mercado_pago_id} en MercadoPago (Status: {$response->status()}). Omitiendo pedido #{$pedido->id}.");
-                        Log::error("LiberarPedidosVencidos: Error de red/API al consultar pago {$pedido->mercado_pago_id}", [
-                            'pedido_id' => $pedido->id,
-                            'status_code' => $response->status()
-                        ]);
-                        continue;
-                    }
-                } catch (\Exception $e) {
-                    $this->error("Excepción al consultar pago {$pedido->mercado_pago_id}: {$e->getMessage()}. Omitiendo pedido #{$pedido->id}.");
-                    Log::error("LiberarPedidosVencidos: Excepción al consultar pago {$pedido->mercado_pago_id}", [
-                        'pedido_id' => $pedido->id,
-                        'exception' => $e->getMessage()
-                    ]);
-                    continue;
-                }
+            // Usar el servicio compartido para verificar si el pedido tiene un pago activo en MP
+            if ($mpConsultaService->tienePagoVivo($pedido)) {
+                $this->line("Pedido #{$pedido->id} tiene un pago activo en MercadoPago. Omitiendo.");
+                continue;
             }
 
             // Proceder a cancelar el pedido y reponer el stock transaccionalmente

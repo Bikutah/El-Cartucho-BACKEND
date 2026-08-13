@@ -374,8 +374,8 @@ class PedidoController extends Controller
             $totalProductos = 0;
             $detalles = [];
 
-            // Calcular expiración a partir de config/mercadopago.php
-            $expiracion = now()->addHours(config('mercadopago.expiration_hours', 72));
+            // Calcular expiración a partir de config/services.php (reserva_minutos, default 20)
+            $expiracion = now()->addMinutes(config('services.mercadopago.reserva_minutos', 20));
 
             $pedido = Pedido::create([
                 'user_id'       => $user->id,
@@ -532,6 +532,13 @@ class PedidoController extends Controller
                     'pending' => config('services.mercadopago.front_url') . '/pago/pending',
                 ],
                 'auto_return' => 'approved',
+                'binary_mode' => true,
+                'payment_methods' => [
+                    'excluded_payment_types' => [
+                        ['id' => 'ticket'],
+                        ['id' => 'atm'],
+                    ],
+                ],
                 'statement_descriptor' => 'ELCARTUCHO',
                 'expires' => true,
                 'expiration_date_to' => $pedido->expira_at->toIso8601String(),
