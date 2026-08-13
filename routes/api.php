@@ -17,7 +17,7 @@ use App\Http\Controllers\CronController;
 Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
 
 #Cron
-Route::post('/cron/liberar-vencidos', [CronController::class, 'liberarPedidosVencidos']);
+Route::get('/cron/liberar-vencidos', [CronController::class, 'liberarPedidosVencidos']);
 
 #Productos
 Route::get('/producto/listar', [ProductoController::class, 'buscar']);

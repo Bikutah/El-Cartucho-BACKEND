@@ -14,7 +14,21 @@ class CronLiberarVencidosTest extends TestCase
     {
         putenv('CRON_SECRET=super_secret_cron_token');
 
-        $response = $this->postJson('/ed/cron/liberar-vencidos');
+        $response = $this->getJson('/ed/cron/liberar-vencidos');
+
+        $response->assertStatus(401);
+        $response->assertJson(['error' => 'No autorizado']);
+    }
+
+    /** @test */
+    public function request_with_malformed_authorization_header_returns_401()
+    {
+        putenv('CRON_SECRET=super_secret_cron_token');
+
+        // Header presente pero sin el prefijo "Bearer "
+        $response = $this->getJson('/ed/cron/liberar-vencidos', [
+            'Authorization' => 'super_secret_cron_token',
+        ]);
 
         $response->assertStatus(401);
         $response->assertJson(['error' => 'No autorizado']);
@@ -25,8 +39,8 @@ class CronLiberarVencidosTest extends TestCase
     {
         putenv('CRON_SECRET=super_secret_cron_token');
 
-        $response = $this->postJson('/ed/cron/liberar-vencidos', [], [
-            'x-cron-secret' => 'wrong_secret_token',
+        $response = $this->getJson('/ed/cron/liberar-vencidos', [
+            'Authorization' => 'Bearer wrong_secret_token',
         ]);
 
         $response->assertStatus(401);
@@ -38,8 +52,8 @@ class CronLiberarVencidosTest extends TestCase
     {
         putenv('CRON_SECRET=super_secret_cron_token');
 
-        $response = $this->postJson('/ed/cron/liberar-vencidos', [], [
-            'x-cron-secret' => 'super_secret_cron_token',
+        $response = $this->getJson('/ed/cron/liberar-vencidos', [
+            'Authorization' => 'Bearer super_secret_cron_token',
         ]);
 
         $response->assertStatus(200);

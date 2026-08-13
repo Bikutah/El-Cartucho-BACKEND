@@ -158,7 +158,7 @@ class WebhookTest extends TestCase
     }
 
     /** @test */
-    public function test_5b_repeated_rejected_notification_returns_200_without_duplicate_stock_restoration()
+    public function test_5b_repeated_rejected_notification_is_idempotent_and_does_not_duplicate_history_entry()
     {
         $producto = Producto::factory()->create(['stock' => 10]);
         $pedido = Pedido::factory()->create(['estado_pago' => 'pendiente']);
@@ -192,13 +192,10 @@ class WebhookTest extends TestCase
         // Stock intacto: no se modifica
         $this->assertEquals(10, $producto->fresh()->stock);
 
-        // Se creó registro en el historial
-        $this->assertDatabaseHas('pedido_historial_estados', [
-            'pedido_id' => $pedido->id,
-            'origen'    => 'webhook',
-        ]);
+        // Se creó exactamente 1 registro en el historial
+        $this->assertEquals(1, \App\Models\PedidoHistorialEstado::where('pedido_id', $pedido->id)->count());
 
-        // Segundo envío: duplicado
+        // Segundo envío: duplicado con el mismo payment_id
         $res2 = $this->postJson('/ed/webhook/mercadopago?data_id=' . $paymentId . '&type=payment', [], [
             'x-signature' => $signature,
             'x-request-id' => $requestId
@@ -207,6 +204,9 @@ class WebhookTest extends TestCase
         $res2->assertJson(['message' => 'Notificación duplicada ya procesada']);
         $this->assertEquals('pendiente', $pedido->fresh()->estado_pago);
         $this->assertEquals(10, $producto->fresh()->stock);
+
+        // El registro en el historial no se duplicó
+        $this->assertEquals(1, \App\Models\PedidoHistorialEstado::where('pedido_id', $pedido->id)->count());
     }
 
     /** @test */
