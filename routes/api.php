@@ -9,11 +9,15 @@ use App\Http\Controllers\CategoriaController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\WishlistController;
+use App\Http\Controllers\CronController;
 
 // ─── Sin autenticación ───────────────────────────────────────────────────────
 
 #Mercado Pago
 Route::post('/webhook/mercadopago', [WebhookController::class, 'handle']);
+
+#Cron
+Route::get('/cron/liberar-vencidos', [CronController::class, 'liberarPedidosVencidos']);
 
 #Productos
 Route::get('/producto/listar', [ProductoController::class, 'buscar']);
