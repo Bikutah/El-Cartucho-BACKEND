@@ -44,9 +44,11 @@ Route::middleware(['firebase.token', 'firebase.user'])->group(function () {
 
     #Pedidos
     Route::post('/pedido/crear', [PedidoController::class, 'store']);
+    Route::get('/pedido/pendiente', [PedidoController::class, 'obtenerPedidoPendiente']);
     Route::get('/mis-pedidos', [PedidoController::class, 'misPedidos']);
     Route::get('/mis-pedidos/{id}', [PedidoController::class, 'detallePedidoCliente']);
     Route::post('/pedido/{id}/reintentar-pago', [PedidoController::class, 'reintentarPago']);
+    Route::post('/pedido/{id}/cancelar', [PedidoController::class, 'cancelarPedido']);
     Route::get('/pedido/{id}/estado', [PedidoController::class, 'obtenerEstado']);
 
     #Carrito
