@@ -559,12 +559,18 @@ class PedidoController extends Controller
 
         $pedidos = Pedido::with(['detalles.producto.imagenes'])
             ->where('firebase_uid', $user->firebase_uid)
+            ->where(function ($q) {
+                $q->whereIn('estado_pago', ['pagado', 'reembolsado'])
+                  ->orWhere(function ($q2) {
+                      $q2->where('estado_pago', 'pendiente')
+                         ->where(function ($q3) {
+                             $q3->whereNull('expira_at')
+                                ->orWhere('expira_at', '>', now());
+                         });
+                  });
+            })
             ->orderByDesc('created_at')
             ->get()
-            ->filter(function ($pedido) {
-                $estadoEfectivo = $pedido->estado_efectivo;
-                return in_array($estadoEfectivo, ['pagado', 'reembolsado', 'pendiente'], true);
-            })
             ->map(function ($pedido) {
                 return [
                     'id'                    => $pedido->id,
@@ -579,7 +585,6 @@ class PedidoController extends Controller
                     'created_at'            => $pedido->created_at,
                     'expira_at'             => $pedido->expira_at?->toIso8601String(),
                     'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
-                    'tiene_init_point'      => !empty($pedido->mercado_pago_init_point),
                     'productos'             => $pedido->detalles->map(function ($d) {
                         return [
                             'nombre'          => optional($d->producto)->nombre ?? 'Producto eliminado',
@@ -589,8 +594,7 @@ class PedidoController extends Controller
                         ];
                     }),
                 ];
-            })
-            ->values();
+            });
 
         return response()->json($pedidos);
     }
@@ -666,14 +670,13 @@ class PedidoController extends Controller
             ->values();
 
         return response()->json([
-            'id'                      => $pedido->id,
-            'estado_pago'             => $pedido->estado_pago,
-            'estado_envio'            => $pedido->estado_envio,
-            'estado_visible'          => $pedido->estado_visible,
-            'estado_efectivo'         => $pedido->estado_efectivo,
-            'expira_at'               => $pedido->expira_at?->toIso8601String(),
-            'mercado_pago_init_point' => $pedido->mercado_pago_init_point,
-            'init_point_disponible'   => !empty($pedido->mercado_pago_init_point),
+            'id'                    => $pedido->id,
+            'estado_pago'           => $pedido->estado_pago,
+            'estado_envio'          => $pedido->estado_envio,
+            'estado_visible'        => $pedido->estado_visible,
+            'estado_efectivo'       => $pedido->estado_efectivo,
+            'expira_at'             => $pedido->expira_at?->toIso8601String(),
+            'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
             'created_at'              => $pedido->created_at,
             'total'                   => $total,
             'subtotal_productos'      => $subtotalProductos,

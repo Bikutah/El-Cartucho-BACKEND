@@ -165,8 +165,26 @@ class ReintentoPagoTest extends TestCase
         // Formato ISO 8601 con offset para expira_at
         $itemVigente = collect($response->json())->firstWhere('id', $pedidoPendienteVigente->id);
         $this->assertNotNull($itemVigente['expira_at']);
-        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/', $itemVigente['expira_at']);
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2}|Z)$/', $itemVigente['expira_at']);
         $this->assertTrue($itemVigente['init_point_disponible']);
+    }
+
+    /** @test */
+    public function pedido_pendiente_con_expira_at_null_aparece_en_listado_mis_pedidos()
+    {
+        $pedidoLegacy = Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => null,
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->getJson('/ed/mis-pedidos');
+
+        $response->assertStatus(200);
+        $ids = collect($response->json())->pluck('id')->toArray();
+        $this->assertContains($pedidoLegacy->id, $ids);
     }
 
     // ─── Detalle Endpoint Tests ─────────────────────────────────────────────
@@ -188,6 +206,25 @@ class ReintentoPagoTest extends TestCase
         $this->assertEquals($pedidoVencido->id, $response->json('id'));
         $this->assertEquals('pendiente', $response->json('estado_pago'));
         $this->assertEquals('expirado', $response->json('estado_efectivo'));
+    }
+
+    /** @test */
+    public function detalle_no_devuelve_clave_mercado_pago_init_point()
+    {
+        $pedido = Pedido::factory()->create([
+            'user_id'                 => $this->user->id,
+            'firebase_uid'            => $this->user->firebase_uid,
+            'estado_pago'             => 'pendiente',
+            'expira_at'               => now()->addMinutes(10),
+            'mercado_pago_init_point' => 'https://mercadopago.com/checkout/123',
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->getJson("/ed/mis-pedidos/{$pedido->id}");
+
+        $response->assertStatus(200);
+        $response->assertJsonMissing(['mercado_pago_init_point']);
+        $this->assertTrue($response->json('init_point_disponible'));
     }
 
     // ─── Reintento Endpoint Tests ────────────────────────────────────────────
@@ -332,7 +369,7 @@ class ReintentoPagoTest extends TestCase
             'estado_pago'     => 'pendiente',
             'estado_efectivo' => 'expirado',
         ]);
-        $this->assertNotNull($response->json('expira_at'));
+        $this->assertMatchesRegularExpression('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}([+-]\d{2}:\d{2}|Z)$/', $response->json('expira_at'));
     }
 
     /** @test */
