@@ -584,7 +584,7 @@ class PedidoController extends Controller
                     'total'                 => (float) $pedido->total,
                     'created_at'            => $pedido->created_at,
                     'expira_at'             => $pedido->expira_at?->toIso8601String(),
-                    'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
+                    'init_point_disponible' => !empty($pedido->mercado_pago_init_point) || !empty($pedido->mercado_pago_preference_id),
                     'productos'             => $pedido->detalles->map(function ($d) {
                         return [
                             'nombre'          => optional($d->producto)->nombre ?? 'Producto eliminado',
@@ -676,13 +676,13 @@ class PedidoController extends Controller
             'estado_visible'        => $pedido->estado_visible,
             'estado_efectivo'       => $pedido->estado_efectivo,
             'expira_at'             => $pedido->expira_at?->toIso8601String(),
-            'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
-            'created_at'              => $pedido->created_at,
-            'total'                   => $total,
-            'subtotal_productos'      => $subtotalProductos,
-            'costo_envio'             => $costoEnvio,
-            'zona_envio'              => optional($pedido->zonaEnvio)->nombre ?? 'Sin zona',
-            'envio'                   => [
+            'init_point_disponible' => !empty($pedido->mercado_pago_init_point) || !empty($pedido->mercado_pago_preference_id),
+            'created_at'            => $pedido->created_at,
+            'total'                 => $total,
+            'subtotal_productos'    => $subtotalProductos,
+            'costo_envio'           => $costoEnvio,
+            'zona_envio'            => optional($pedido->zonaEnvio)->nombre ?? 'Sin zona',
+            'envio'                 => [
                 'domicilio'       => $pedido->domicilio,
                 'ciudad'          => $pedido->ciudad,
                 'codigo_postal'   => $pedido->codigo_postal,
@@ -739,7 +739,12 @@ class PedidoController extends Controller
                 ], 409);
             }
 
-            if (empty($pedido->mercado_pago_init_point)) {
+            $initPoint = $pedido->mercado_pago_init_point;
+            if (empty($initPoint) && !empty($pedido->mercado_pago_preference_id)) {
+                $initPoint = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id={$pedido->mercado_pago_preference_id}";
+            }
+
+            if (empty($initPoint)) {
                 return response()->json([
                     'error' => 'El pedido no posee un link de pago generado',
                     'code'  => 'SIN_LINK_PAGO',
@@ -747,7 +752,7 @@ class PedidoController extends Controller
             }
 
             return response()->json([
-                'init_point' => $pedido->mercado_pago_init_point,
+                'init_point' => $initPoint,
                 'expira_at'  => $pedido->expira_at?->toIso8601String(),
             ], 200);
         });
