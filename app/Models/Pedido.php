@@ -41,6 +41,7 @@ class Pedido extends Model
         'entregado_at',
         'mercado_pago_id',
         'mercado_pago_preference_id',
+        'mercado_pago_init_point',
         'total',
         'expira_at',
     ];
@@ -271,5 +272,17 @@ class Pedido extends Model
         }
 
         return 'Desconocido';
+    }
+
+    /**
+     * Accessor para el estado efectivo del pago (interpreta vencimientos en lectura sin alterar la BD).
+     */
+    public function getEstadoEfectivoAttribute(): string
+    {
+        if ($this->estado_pago === self::ESTADO_PAGO_PENDIENTE && $this->expira_at !== null && $this->expira_at <= now()) {
+            return self::ESTADO_PAGO_EXPIRADO;
+        }
+
+        return $this->estado_pago;
     }
 }
