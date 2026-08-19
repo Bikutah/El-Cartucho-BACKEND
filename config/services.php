@@ -41,6 +41,7 @@ return [
         'front_url' => env('FRONT_URL'),
         'reserva_minutos' => (int) env('PEDIDO_RESERVA_MINUTOS', 20),
         'cron_secret' => env('CRON_SECRET'),
+        'cron_limit' => (int) env('CRON_LIMIT', 25),
     ],
 
 ];

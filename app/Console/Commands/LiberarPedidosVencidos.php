@@ -20,7 +20,7 @@ class LiberarPedidosVencidos extends Command
      *
      * @var string
      */
-    protected $signature = 'pedidos:liberar-vencidos';
+    protected $signature = 'pedidos:liberar-vencidos {--limit=25} {--dry-run}';
 
     /**
      * The console command description.
@@ -34,25 +34,33 @@ class LiberarPedidosVencidos extends Command
      */
     public function handle(MercadoPagoConsultaService $mpConsultaService)
     {
-        $this->info('Iniciando proceso de liberación de pedidos vencidos...');
-        Log::info('LiberarPedidosVencidos: Iniciando proceso...');
+        $isDryRun = (bool) $this->option('dry-run');
+        $limit = (int) $this->option('limit');
+
+        $this->info('Iniciando proceso de liberación de pedidos vencidos...' . ($isDryRun ? ' [DRY-RUN]' : ''));
+        Log::info('LiberarPedidosVencidos: Iniciando proceso' . ($isDryRun ? ' (DRY-RUN)' : '') . '...');
 
         $now = now();
         $legacyHours = config('mercadopago.legacy_expiration_hours', 96);
         $legacyThreshold = $now->copy()->subHours($legacyHours);
 
         // Buscar pedidos con estado_pago 'pendiente'
-        $pedidos = Pedido::where('estado_pago', 'pendiente')
-            ->where(function ($query) use ($now, $legacyThreshold) {
-                $query->whereNotNull('expira_at')
-                      ->where('expira_at', '<=', $now)
-                      ->orWhere(function ($subQuery) use ($legacyThreshold) {
-                          // Fallback para pedidos legados (legacy_expiration_hours)
-                          $subQuery->whereNull('expira_at')
-                                   ->where('created_at', '<=', $legacyThreshold);
-                      });
-            })
-            ->get();
+        $query = Pedido::where('estado_pago', 'pendiente')
+            ->where(function ($q) use ($now, $legacyThreshold) {
+                $q->whereNotNull('expira_at')
+                  ->where('expira_at', '<=', $now)
+                  ->orWhere(function ($subQuery) use ($legacyThreshold) {
+                      // Fallback para pedidos legados (legacy_expiration_hours)
+                      $subQuery->whereNull('expira_at')
+                               ->where('created_at', '<=', $legacyThreshold);
+                  });
+            });
+
+        if ($limit > 0) {
+            $query->take($limit);
+        }
+
+        $pedidos = $query->get();
 
         $this->info("Se encontraron {$pedidos->count()} pedidos con expiración teórica superada.");
 
@@ -69,6 +77,30 @@ class LiberarPedidosVencidos extends Command
                 continue;
             }
 
+            $detalles = DetallePedido::where('pedido_id', $pedido->id)->get();
+            $detallesStockRepuesto = [];
+
+            if ($isDryRun) {
+                foreach ($detalles as $detalle) {
+                    $producto = Producto::find($detalle->producto_id);
+                    if ($producto) {
+                        $detallesStockRepuesto[] = "Producto ID: {$producto->id} ({$producto->nombre}) - Cantidad: {$detalle->cantidad}";
+                    }
+                }
+
+                $canceladosCount++;
+
+                $logMsg = sprintf(
+                    "[DRY-RUN] Pedido #%d sería cancelado por vencimiento. Expiración usada: %s. Stock a devolver: [%s]",
+                    $pedido->id,
+                    $expirationDateUsed,
+                    implode(', ', $detallesStockRepuesto)
+                );
+                Log::info("LiberarPedidosVencidos: " . $logMsg);
+                $this->info("[DRY-RUN] Pedido #{$pedido->id} sería cancelado. Stock a devolver: [" . implode(', ', $detallesStockRepuesto) . "]");
+                continue;
+            }
+
             // Proceder a cancelar el pedido y reponer el stock transaccionalmente
             DB::beginTransaction();
             try {
@@ -78,9 +110,6 @@ class LiberarPedidosVencidos extends Command
                 // Verificar de nuevo el estado por si cambió concurrentemente
                 if ($pedidoParaCancelar && $pedidoParaCancelar->estado_pago === 'pendiente') {
                     $pedidoParaCancelar->cambiarEstadoPago('expirado', 'comando');
-
-                    $detalles = DetallePedido::where('pedido_id', $pedido->id)->get();
-                    $detallesStockRepuesto = [];
 
                     foreach ($detalles as $detalle) {
                         $producto = Producto::where('id', $detalle->producto_id)->lockForUpdate()->first();
@@ -116,7 +145,11 @@ class LiberarPedidosVencidos extends Command
             }
         }
 
-        $this->info("Proceso completado. Se liberaron y cancelaron {$canceladosCount} pedidos vencidos.");
-        Log::info("LiberarPedidosVencidos: Proceso completado. Pedidos cancelados: {$canceladosCount}.");
+        if ($isDryRun) {
+            $this->info("Proceso DRY-RUN completado. Se habrían liberado {$canceladosCount} pedidos vencidos.");
+        } else {
+            $this->info("Proceso completado. Se liberaron y cancelaron {$canceladosCount} pedidos vencidos.");
+            Log::info("LiberarPedidosVencidos: Proceso completado. Pedidos cancelados: {$canceladosCount}.");
+        }
     }
 }
