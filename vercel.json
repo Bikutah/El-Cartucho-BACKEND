@@ -16,5 +16,11 @@
         "src": "/(.*)",
         "dest": "api/index.php"
       }
+    ],
+    "crons": [
+      {
+        "path": "/ed/cron/liberar-vencidos",
+        "schedule": "0 3 * * *"
+      }
     ]
-  }
+}

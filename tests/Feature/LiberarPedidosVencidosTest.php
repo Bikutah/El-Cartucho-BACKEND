@@ -293,4 +293,87 @@ class LiberarPedidosVencidosTest extends TestCase
         $this->assertEquals('pendiente', $pedido->fresh()->estado);
         $this->assertEquals(10, $producto->fresh()->stock);
     }
+
+    /** @test */
+    public function dry_run_option_does_not_modify_order_state_stock_or_history()
+    {
+        Http::fake([
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []], 200),
+        ]);
+
+        $producto = Producto::factory()->create(['stock' => 10]);
+        $pedido = Pedido::factory()->create([
+            'estado_pago' => 'pendiente',
+            'expira_at'   => now()->subMinutes(5),
+        ]);
+
+        DetallePedido::create([
+            'pedido_id'       => $pedido->id,
+            'producto_id'     => $producto->id,
+            'cantidad'        => 3,
+            'precio_unitario' => $producto->precioUnitario,
+        ]);
+
+        $initialHistorialCount = \App\Models\PedidoHistorialEstado::count();
+
+        Artisan::call('pedidos:liberar-vencidos', ['--dry-run' => true]);
+
+        $this->assertEquals('pendiente', $pedido->fresh()->estado_pago);
+        $this->assertEquals(10, $producto->fresh()->stock);
+        $this->assertEquals($initialHistorialCount, \App\Models\PedidoHistorialEstado::count());
+
+        $output = Artisan::output();
+        $this->assertStringContainsString('DRY-RUN', $output);
+        $this->assertStringContainsString("Pedido #{$pedido->id}", $output);
+        $this->assertStringContainsString("Producto ID: {$producto->id}", $output);
+    }
+
+    /** @test */
+    public function limit_option_restricts_number_of_processed_orders()
+    {
+        Http::fake([
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []], 200),
+        ]);
+
+        $producto = Producto::factory()->create(['stock' => 10]);
+
+        $pedido1 = Pedido::factory()->create(['estado_pago' => 'pendiente', 'expira_at' => now()->subMinutes(10)]);
+        $pedido2 = Pedido::factory()->create(['estado_pago' => 'pendiente', 'expira_at' => now()->subMinutes(10)]);
+        $pedido3 = Pedido::factory()->create(['estado_pago' => 'pendiente', 'expira_at' => now()->subMinutes(10)]);
+
+        DetallePedido::create(['pedido_id' => $pedido1->id, 'producto_id' => $producto->id, 'cantidad' => 1, 'precio_unitario' => 100]);
+        DetallePedido::create(['pedido_id' => $pedido2->id, 'producto_id' => $producto->id, 'cantidad' => 1, 'precio_unitario' => 100]);
+        DetallePedido::create(['pedido_id' => $pedido3->id, 'producto_id' => $producto->id, 'cantidad' => 1, 'precio_unitario' => 100]);
+
+        Artisan::call('pedidos:liberar-vencidos', ['--limit' => 1]);
+
+        $expirados = Pedido::where('estado_pago', 'expirado')->count();
+        $pendientes = Pedido::where('estado_pago', 'pendiente')->count();
+
+        $this->assertEquals(1, $expirados);
+        $this->assertEquals(2, $pendientes);
+    }
+
+    /** @test */
+    public function without_limit_option_uses_default_limit()
+    {
+        Http::fake([
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []], 200),
+        ]);
+
+        $producto = Producto::factory()->create(['stock' => 100]);
+
+        for ($i = 0; $i < 30; $i++) {
+            $p = Pedido::factory()->create(['estado_pago' => 'pendiente', 'expira_at' => now()->subMinutes(10)]);
+            DetallePedido::create(['pedido_id' => $p->id, 'producto_id' => $producto->id, 'cantidad' => 1, 'precio_unitario' => 100]);
+        }
+
+        Artisan::call('pedidos:liberar-vencidos');
+
+        $expirados = Pedido::where('estado_pago', 'expirado')->count();
+        $pendientes = Pedido::where('estado_pago', 'pendiente')->count();
+
+        $this->assertEquals(25, $expirados);
+        $this->assertEquals(5, $pendientes);
+    }
 }

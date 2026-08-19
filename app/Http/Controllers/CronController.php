@@ -27,7 +27,8 @@ class CronController extends Controller
             return response()->json(['error' => 'No autorizado'], 401);
         }
 
-        Artisan::call('pedidos:liberar-vencidos');
+        $limit = (int) config('services.mercadopago.cron_limit', 25);
+        Artisan::call('pedidos:liberar-vencidos', ['--limit' => $limit]);
         $output = Artisan::output();
 
         Log::info('CronController: Ejecutada liberación de pedidos vencidos vía HTTP GET cron');
