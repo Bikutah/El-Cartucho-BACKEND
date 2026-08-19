@@ -188,6 +188,49 @@ class CancelarPedidoTest extends TestCase
         $this->assertTrue($response->json('init_point_disponible'));
     }
 
+    /** @test */
+    public function pedido_pendiente_con_user_id_seteado_y_firebase_uid_null_aparece_en_pedido_pendiente()
+    {
+        $pedido = Pedido::factory()->create([
+            'user_id'                 => $this->user->id,
+            'firebase_uid'            => null,
+            'estado_pago'             => 'pendiente',
+            'expira_at'               => now()->addMinutes(15),
+            'mercado_pago_init_point' => 'https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id=123',
+            'total'                   => 5000.00,
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->getJson('/ed/pedido/pendiente');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'id' => $pedido->id,
+            ]);
+    }
+
+    /** @test */
+    public function pedido_pendiente_con_preference_id_pero_sin_init_point_devuelve_init_point_disponible_false()
+    {
+        $pedido = Pedido::factory()->create([
+            'user_id'                  => $this->user->id,
+            'firebase_uid'             => $this->user->firebase_uid,
+            'estado_pago'              => 'pendiente',
+            'expira_at'                => now()->addMinutes(15),
+            'mercado_pago_preference_id' => 'PREF-123456',
+            'mercado_pago_init_point'  => null,
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->getJson('/ed/pedido/pendiente');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'id'                    => $pedido->id,
+                'init_point_disponible' => false,
+            ]);
+    }
+
     // ─── POST /ed/pedido/{id}/cancelar Tests ────────────────────────────────────
 
     /** @test */

@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Exceptions\CodigoPostalNoEncontradoException;
 use App\Services\MercadoPagoConsultaService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Str;
 
 class PedidoController extends Controller
@@ -584,7 +585,7 @@ class PedidoController extends Controller
                     'total'                 => (float) $pedido->total,
                     'created_at'            => $pedido->created_at,
                     'expira_at'             => $pedido->expira_at?->toIso8601String(),
-                    'init_point_disponible' => !empty($pedido->mercado_pago_init_point) || !empty($pedido->mercado_pago_preference_id),
+                    'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
                     'productos'             => $pedido->detalles->map(function ($d) {
                         return [
                             'nombre'          => optional($d->producto)->nombre ?? 'Producto eliminado',
@@ -676,7 +677,7 @@ class PedidoController extends Controller
             'estado_visible'        => $pedido->estado_visible,
             'estado_efectivo'       => $pedido->estado_efectivo,
             'expira_at'             => $pedido->expira_at?->toIso8601String(),
-            'init_point_disponible' => !empty($pedido->mercado_pago_init_point) || !empty($pedido->mercado_pago_preference_id),
+            'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
             'created_at'            => $pedido->created_at,
             'total'                 => $total,
             'subtotal_productos'    => $subtotalProductos,
@@ -739,12 +740,7 @@ class PedidoController extends Controller
                 ], 409);
             }
 
-            $initPoint = $pedido->mercado_pago_init_point;
-            if (empty($initPoint) && !empty($pedido->mercado_pago_preference_id)) {
-                $initPoint = "https://www.mercadopago.com.ar/checkout/v1/redirect?pref_id={$pedido->mercado_pago_preference_id}";
-            }
-
-            if (empty($initPoint)) {
+            if (empty($pedido->mercado_pago_init_point)) {
                 return response()->json([
                     'error' => 'El pedido no posee un link de pago generado',
                     'code'  => 'SIN_LINK_PAGO',
@@ -752,7 +748,7 @@ class PedidoController extends Controller
             }
 
             return response()->json([
-                'init_point' => $initPoint,
+                'init_point' => $pedido->mercado_pago_init_point,
                 'expira_at'  => $pedido->expira_at?->toIso8601String(),
             ], 200);
         });
@@ -786,7 +782,17 @@ class PedidoController extends Controller
     {
         $user = $request->user();
 
-        $pedido = Pedido::where('firebase_uid', $user->firebase_uid)
+        $pedido = Pedido::where(function ($q) use ($user) {
+                $q->where(function ($q2) use ($user) {
+                    if ($user->id) {
+                        $q2->where('user_id', $user->id);
+                    }
+                })->orWhere(function ($q2) use ($user) {
+                    if ($user->firebase_uid) {
+                        $q2->where('firebase_uid', $user->firebase_uid);
+                    }
+                });
+            })
             ->where('estado_pago', 'pendiente')
             ->where(function ($q) {
                 $q->whereNull('expira_at')
@@ -804,7 +810,7 @@ class PedidoController extends Controller
             'id'                    => $pedido->id,
             'total'                 => (float) $pedido->total,
             'expira_at'             => $pedido->expira_at?->toIso8601String(),
-            'init_point_disponible' => !empty($pedido->mercado_pago_init_point) || !empty($pedido->mercado_pago_preference_id),
+            'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
         ], 200);
     }
 
