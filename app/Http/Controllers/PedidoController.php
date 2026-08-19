@@ -12,7 +12,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use App\Exceptions\CodigoPostalNoEncontradoException;
-use Barryvdh\DomPDF\Facade\Pdf;
+use App\Services\MercadoPagoConsultaService;
 use Illuminate\Support\Str;
 
 class PedidoController extends Controller
@@ -780,5 +780,76 @@ class PedidoController extends Controller
             'estado_efectivo' => $pedido->estado_efectivo,
             'expira_at'       => $pedido->expira_at?->toIso8601String(),
         ], 200);
+    }
+
+    public function obtenerPedidoPendiente(Request $request)
+    {
+        $user = $request->user();
+
+        $pedido = Pedido::where('firebase_uid', $user->firebase_uid)
+            ->where('estado_pago', 'pendiente')
+            ->where(function ($q) {
+                $q->whereNull('expira_at')
+                  ->orWhere('expira_at', '>', now());
+            })
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+
+        if (!$pedido) {
+            return response()->json(null, 200);
+        }
+
+        return response()->json([
+            'id'                    => $pedido->id,
+            'total'                 => (float) $pedido->total,
+            'expira_at'             => $pedido->expira_at?->toIso8601String(),
+            'init_point_disponible' => !empty($pedido->mercado_pago_init_point) || !empty($pedido->mercado_pago_preference_id),
+        ], 200);
+    }
+
+    public function cancelarPedido(Request $request, $id, MercadoPagoConsultaService $mpConsultaService)
+    {
+        $user = $request->user();
+
+        return DB::transaction(function () use ($user, $id, $mpConsultaService) {
+            $pedido = Pedido::where('id', $id)->lockForUpdate()->first();
+
+            if (!$pedido) {
+                return response()->json(['message' => 'No tienes permiso para acceder a este pedido'], 403);
+            }
+
+            $perteneceAlUsuario = ($pedido->user_id && $pedido->user_id === $user->id)
+                || ($pedido->firebase_uid && $pedido->firebase_uid === $user->firebase_uid);
+
+            if (!$perteneceAlUsuario) {
+                return response()->json(['message' => 'No tienes permiso para acceder a este pedido'], 403);
+            }
+
+            if ($pedido->estado_pago !== 'pendiente') {
+                return response()->json([
+                    'error' => 'El pedido no se encuentra en estado pendiente',
+                    'code'  => 'ESTADO_NO_VALIDO',
+                ], 409);
+            }
+
+            if ($mpConsultaService->tienePagoVivo($pedido)) {
+                return response()->json([
+                    'error' => 'El pedido tiene un pago en proceso o aprobado en Mercado Pago',
+                    'code'  => 'PAGO_EN_CURSO',
+                ], 409);
+            }
+
+            $pedido->cambiarEstadoPago('expirado', 'cliente', $user->id, 'cancelado_por_usuario');
+
+            foreach ($pedido->detalles as $detalle) {
+                $producto = Producto::where('id', $detalle->producto_id)->lockForUpdate()->first();
+                if ($producto) {
+                    $producto->increment('stock', $detalle->cantidad);
+                }
+            }
+
+            return response()->json(['message' => 'Pedido cancelado correctamente'], 200);
+        });
     }
 }
