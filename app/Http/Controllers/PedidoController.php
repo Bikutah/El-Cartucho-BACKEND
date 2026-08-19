@@ -487,15 +487,17 @@ class PedidoController extends Controller
             ], 500);
         }
 
-        // Guardamos el preference_id en el pedido para trazabilidad
+        // Guardamos el preference_id e init_point en el pedido para trazabilidad y reintento
         $pedido->mercado_pago_preference_id = $preference['id'];
+        $pedido->mercado_pago_init_point = $preference['init_point'] ?? null;
         $pedido->save();
 
         return response()->json([
-            'pedido_id'              => $pedido->id,
-            'mercado_pago_url'       => $preference['init_point'],
-            'mercado_pago_id'        => $preference['id'],
+            'pedido_id'                  => $pedido->id,
+            'mercado_pago_url'           => $preference['init_point'],
+            'mercado_pago_id'            => $preference['id'],
             'mercado_pago_preference_id' => $preference['id'],
+            'mercado_pago_init_point'    => $preference['init_point'] ?? null,
         ], 201);
     }
 
@@ -557,20 +559,33 @@ class PedidoController extends Controller
 
         $pedidos = Pedido::with(['detalles.producto.imagenes'])
             ->where('firebase_uid', $user->firebase_uid)
+            ->where(function ($q) {
+                $q->whereIn('estado_pago', ['pagado', 'reembolsado'])
+                  ->orWhere(function ($q2) {
+                      $q2->where('estado_pago', 'pendiente')
+                         ->where(function ($q3) {
+                             $q3->whereNull('expira_at')
+                                ->orWhere('expira_at', '>', now());
+                         });
+                  });
+            })
             ->orderByDesc('created_at')
             ->get()
             ->map(function ($pedido) {
                 return [
-                    'id'             => $pedido->id,
-                    'estado'         => $pedido->estado,
-                    'estado_pago'    => $pedido->estado_pago,
-                    'estado_envio'   => $pedido->estado_envio,
-                    'estado_visible' => $pedido->estado_visible,
-                    'costo_envio'    => (float) $pedido->costo_envio,
-                    'tiene_tracking' => !empty($pedido->tracking_numero),
-                    'total'          => (float) $pedido->total,
-                    'created_at'     => $pedido->created_at,
-                    'productos'      => $pedido->detalles->map(function ($d) {
+                    'id'                    => $pedido->id,
+                    'estado'                => $pedido->estado,
+                    'estado_pago'           => $pedido->estado_pago,
+                    'estado_efectivo'       => $pedido->estado_efectivo,
+                    'estado_envio'          => $pedido->estado_envio,
+                    'estado_visible'        => $pedido->estado_visible,
+                    'costo_envio'           => (float) $pedido->costo_envio,
+                    'tiene_tracking'        => !empty($pedido->tracking_numero),
+                    'total'                 => (float) $pedido->total,
+                    'created_at'            => $pedido->created_at,
+                    'expira_at'             => $pedido->expira_at?->toIso8601String(),
+                    'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
+                    'productos'             => $pedido->detalles->map(function ($d) {
                         return [
                             'nombre'          => optional($d->producto)->nombre ?? 'Producto eliminado',
                             'cantidad'        => $d->cantidad,
@@ -655,16 +670,19 @@ class PedidoController extends Controller
             ->values();
 
         return response()->json([
-            'id'                 => $pedido->id,
-            'estado_pago'        => $pedido->estado_pago,
-            'estado_envio'       => $pedido->estado_envio,
-            'estado_visible'     => $pedido->estado_visible,
-            'created_at'         => $pedido->created_at,
-            'total'              => $total,
-            'subtotal_productos' => $subtotalProductos,
-            'costo_envio'        => $costoEnvio,
-            'zona_envio'         => optional($pedido->zonaEnvio)->nombre ?? 'Sin zona',
-            'envio'              => [
+            'id'                    => $pedido->id,
+            'estado_pago'           => $pedido->estado_pago,
+            'estado_envio'          => $pedido->estado_envio,
+            'estado_visible'        => $pedido->estado_visible,
+            'estado_efectivo'       => $pedido->estado_efectivo,
+            'expira_at'             => $pedido->expira_at?->toIso8601String(),
+            'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
+            'created_at'              => $pedido->created_at,
+            'total'                   => $total,
+            'subtotal_productos'      => $subtotalProductos,
+            'costo_envio'             => $costoEnvio,
+            'zona_envio'              => optional($pedido->zonaEnvio)->nombre ?? 'Sin zona',
+            'envio'                   => [
                 'domicilio'       => $pedido->domicilio,
                 'ciudad'          => $pedido->ciudad,
                 'codigo_postal'   => $pedido->codigo_postal,
@@ -687,5 +705,75 @@ class PedidoController extends Controller
             }),
             'historial'          => $historial,
         ]);
+    }
+
+    public function reintentarPago(Request $request, $id)
+    {
+        $user = $request->user();
+
+        return DB::transaction(function () use ($user, $id) {
+            $pedido = Pedido::where('id', $id)->lockForUpdate()->first();
+
+            if (!$pedido) {
+                return response()->json(['message' => 'Pedido no encontrado'], 404);
+            }
+
+            $perteneceAlUsuario = ($pedido->user_id && $pedido->user_id === $user->id)
+                || ($pedido->firebase_uid && $pedido->firebase_uid === $user->firebase_uid);
+
+            if (!$perteneceAlUsuario) {
+                return response()->json(['message' => 'No tienes permiso para acceder a este pedido'], 403);
+            }
+
+            if ($pedido->estado_pago !== 'pendiente') {
+                return response()->json([
+                    'error' => 'El pedido no se encuentra en estado pendiente',
+                    'code'  => 'ESTADO_NO_VALIDO',
+                ], 409);
+            }
+
+            if ($pedido->expira_at !== null && $pedido->expira_at <= now()) {
+                return response()->json([
+                    'error' => 'La reserva del pedido ha expirado',
+                    'code'  => 'RESERVA_EXPIRADA',
+                ], 409);
+            }
+
+            if (empty($pedido->mercado_pago_init_point)) {
+                return response()->json([
+                    'error' => 'El pedido no posee un link de pago generado',
+                    'code'  => 'SIN_LINK_PAGO',
+                ], 409);
+            }
+
+            return response()->json([
+                'init_point' => $pedido->mercado_pago_init_point,
+                'expira_at'  => $pedido->expira_at?->toIso8601String(),
+            ], 200);
+        });
+    }
+
+    public function obtenerEstado(Request $request, $id)
+    {
+        $user = $request->user();
+
+        $pedido = Pedido::find($id);
+
+        if (!$pedido) {
+            return response()->json(['message' => 'Pedido no encontrado'], 404);
+        }
+
+        $perteneceAlUsuario = ($pedido->user_id && $pedido->user_id === $user->id)
+            || ($pedido->firebase_uid && $pedido->firebase_uid === $user->firebase_uid);
+
+        if (!$perteneceAlUsuario) {
+            return response()->json(['message' => 'No tienes permiso para acceder a este pedido'], 403);
+        }
+
+        return response()->json([
+            'estado_pago'     => $pedido->estado_pago,
+            'estado_efectivo' => $pedido->estado_efectivo,
+            'expira_at'       => $pedido->expira_at?->toIso8601String(),
+        ], 200);
     }
 }
