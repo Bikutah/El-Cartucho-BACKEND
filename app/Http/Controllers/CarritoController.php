@@ -38,16 +38,22 @@ class CarritoController extends Controller
             'cantidad'    => 'required|integer|min:1',
         ]);
 
-        $userId   = $request->user()->id;
-        $producto = Producto::findOrFail($request->producto_id);
-        $cantidad = min($request->cantidad, $producto->stock);
+        $userId             = $request->user()->id;
+        $producto           = Producto::findOrFail($request->producto_id);
+        $cantidadSolicitada = (int) $request->cantidad;
+        $cantidad           = min($cantidadSolicitada, $producto->stock);
+        $huboRecorte        = $cantidadSolicitada > $cantidad;
 
         $item = Carrito::updateOrCreate(
             ['user_id' => $userId, 'producto_id' => $request->producto_id],
             ['cantidad' => $cantidad]
         );
 
-        return response()->json($item);
+        $responseData = $item->toArray();
+        $responseData['cantidad_guardada'] = $cantidad;
+        $responseData['hubo_recorte']      = $huboRecorte;
+
+        return response()->json($responseData);
     }
 
     public function removeItem(Request $request, int $productoId)
