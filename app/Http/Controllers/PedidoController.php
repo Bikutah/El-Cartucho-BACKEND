@@ -7,6 +7,7 @@ use App\Models\DetallePedido;
 use App\Models\PedidoHistorialEstado;
 use App\Models\Producto;
 use App\Models\ZonaEnvio;
+use App\Models\Carrito;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -372,6 +373,24 @@ class PedidoController extends Controller
         DB::beginTransaction();
 
         try {
+            $pedidoPendienteVigente = $this->aplicarFiltroUsuario(Pedido::query(), $user)
+                ->where('estado_pago', 'pendiente')
+                ->where(function ($q) {
+                    $q->whereNull('expira_at')
+                      ->orWhere('expira_at', '>', now());
+                })
+                ->lockForUpdate()
+                ->first();
+
+            if ($pedidoPendienteVigente) {
+                DB::rollBack();
+                return response()->json([
+                    'error'     => 'Ya tienes un pedido pendiente de pago vigente',
+                    'code'      => 'PEDIDO_PENDIENTE_EXISTENTE',
+                    'pedido_id' => $pedidoPendienteVigente->id,
+                ], 409);
+            }
+
             $totalProductos = 0;
             $detalles = [];
 
@@ -428,6 +447,13 @@ class PedidoController extends Controller
 
             $total = $totalProductos + $costoEnvio;
             $pedido->update(['total' => $total]);
+
+            // Vaciar del carrito del usuario los productos que entraron en este pedido
+            $productoIdsCreados = array_column($request->productos, 'producto_id');
+
+            $this->aplicarFiltroUsuario(Carrito::query(), $user)
+                ->whereIn('producto_id', $productoIdsCreados)
+                ->delete();
 
             DB::commit();
         } catch (\Exception $e) {
@@ -782,17 +808,7 @@ class PedidoController extends Controller
     {
         $user = $request->user();
 
-        $pedido = Pedido::where(function ($q) use ($user) {
-                $q->where(function ($q2) use ($user) {
-                    if ($user->id) {
-                        $q2->where('user_id', $user->id);
-                    }
-                })->orWhere(function ($q2) use ($user) {
-                    if ($user->firebase_uid) {
-                        $q2->where('firebase_uid', $user->firebase_uid);
-                    }
-                });
-            })
+        $pedido = $this->aplicarFiltroUsuario(Pedido::with(['detalles.producto.imagenes']), $user)
             ->where('estado_pago', 'pendiente')
             ->where(function ($q) {
                 $q->whereNull('expira_at')
@@ -806,11 +822,22 @@ class PedidoController extends Controller
             return response()->json(null, 200);
         }
 
+        $productos = $pedido->detalles->map(function ($d) {
+            return [
+                'producto_id'     => $d->producto_id,
+                'nombre'          => optional($d->producto)->nombre ?? 'Producto eliminado',
+                'cantidad'        => (int) $d->cantidad,
+                'precio_unitario' => (float) $d->precio_unitario,
+                'imagen'          => optional($d->producto?->imagenes->first())->url,
+            ];
+        });
+
         return response()->json([
             'id'                    => $pedido->id,
             'total'                 => (float) $pedido->total,
             'expira_at'             => $pedido->expira_at?->toIso8601String(),
             'init_point_disponible' => !empty($pedido->mercado_pago_init_point),
+            'productos'             => $productos,
         ], 200);
     }
 
@@ -848,14 +875,82 @@ class PedidoController extends Controller
 
             $pedido->cambiarEstadoPago('expirado', 'cliente', $user->id, 'cancelado_por_usuario');
 
+            $ajustes = [];
+            $reposicionOk = true;
+
             foreach ($pedido->detalles as $detalle) {
                 $producto = Producto::where('id', $detalle->producto_id)->lockForUpdate()->first();
                 if ($producto) {
                     $producto->increment('stock', $detalle->cantidad);
+                    $producto->refresh();
+                }
+
+                try {
+                    if ($producto) {
+                        $itemExistente = $this->aplicarFiltroUsuario(Carrito::query(), $user)
+                            ->where('producto_id', $producto->id)
+                            ->first();
+
+                        $cantidadExistente = $itemExistente ? (int) $itemExistente->cantidad : 0;
+                        $cantidadSolicitada = $cantidadExistente + (int) $detalle->cantidad;
+                        $cantidadFinal = min($cantidadSolicitada, (int) $producto->stock);
+
+                        if ($cantidadFinal > 0) {
+                            if ($itemExistente) {
+                                $itemExistente->update([
+                                    'user_id'      => $user->id,
+                                    'firebase_uid' => $user->firebase_uid,
+                                    'cantidad'     => $cantidadFinal,
+                                ]);
+                            } else {
+                                Carrito::create([
+                                    'user_id'      => $user->id,
+                                    'firebase_uid' => $user->firebase_uid,
+                                    'producto_id'  => $producto->id,
+                                    'cantidad'     => $cantidadFinal,
+                                ]);
+                            }
+                        }
+
+                        if ($cantidadSolicitada > $cantidadFinal) {
+                            $ajustes[] = [
+                                'producto_id'         => $producto->id,
+                                'nombre'              => $producto->nombre,
+                                'cantidad_solicitada' => $cantidadSolicitada,
+                                'cantidad_final'      => $cantidadFinal,
+                            ];
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    $reposicionOk = false;
+                    Log::warning("Falló la reposición al carrito para el producto ID {$detalle->producto_id} al cancelar pedido {$pedido->id}: {$e->getMessage()}", [
+                        'pedido_id'   => $pedido->id,
+                        'producto_id' => $detalle->producto_id,
+                        'error'       => $e->getMessage(),
+                    ]);
                 }
             }
 
-            return response()->json(['message' => 'Pedido cancelado correctamente'], 200);
+            return response()->json([
+                'message'               => 'Pedido cancelado correctamente',
+                'reposicion_carrito_ok' => $reposicionOk,
+                'ajustes'               => $ajustes,
+            ], 200);
+        });
+    }
+
+    private function aplicarFiltroUsuario($query, $user)
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where(function ($q2) use ($user) {
+                if ($user->id) {
+                    $q2->where('user_id', $user->id);
+                }
+            })->orWhere(function ($q2) use ($user) {
+                if ($user->firebase_uid) {
+                    $q2->where('firebase_uid', $user->firebase_uid);
+                }
+            });
         });
     }
 }

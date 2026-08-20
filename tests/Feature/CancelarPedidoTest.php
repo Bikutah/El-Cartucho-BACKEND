@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Models\Carrito;
 use App\Models\DetallePedido;
 use App\Models\Pedido;
 use App\Models\PedidoHistorialEstado;
 use App\Models\Producto;
 use App\Models\User;
+use App\Models\ZonaEnvio;
 use Firebase\JWT\JWT;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -460,6 +462,368 @@ class CancelarPedidoTest extends TestCase
             'estado_nuevo'    => 'expirado',
             'origen'          => 'cliente',
             'observacion'     => 'cancelado_por_usuario',
+        ]);
+    }
+
+    /** @test */
+    public function store_con_pedido_pendiente_vigente_retorna_409_pedido_pendiente_existente_no_crea_pedido_ni_modifica_stock()
+    {
+        $zona = ZonaEnvio::create(['nombre' => 'Zona 1000', 'cp_desde' => 1000, 'cp_hasta' => 1000, 'costo' => 500, 'activa' => true, 'orden' => 1]);
+        $producto = Producto::factory()->create(['stock' => 10]);
+
+        $pedidoExistente = Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => now()->addMinutes(15),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'codigo_postal' => '1000',
+                'productos'     => [
+                    ['producto_id' => $producto->id, 'cantidad' => 2],
+                ],
+            ]);
+
+        $response->assertStatus(409)
+            ->assertJson([
+                'code'      => 'PEDIDO_PENDIENTE_EXISTENTE',
+                'pedido_id' => $pedidoExistente->id,
+            ]);
+
+        $this->assertEquals(10, $producto->fresh()->stock);
+        $this->assertDatabaseCount('pedidos', 1);
+    }
+
+    /** @test */
+    public function store_con_pedido_pendiente_vencido_permite_crear_nuevo_pedido()
+    {
+        $zona = ZonaEnvio::create(['nombre' => 'Zona 1000', 'cp_desde' => 1000, 'cp_hasta' => 1000, 'costo' => 500, 'activa' => true, 'orden' => 1]);
+        $producto = Producto::factory()->create(['stock' => 10]);
+
+        Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => now()->subMinutes(5),
+        ]);
+
+        Http::fake([
+            'https://www.googleapis.com/*' => Http::response([$this->kid => $this->certPem], 200),
+            'https://api.mercadopago.com/checkout/preferences' => Http::response(['id' => 'PREF-NEW', 'init_point' => 'https://mp.com/init'], 200),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'codigo_postal' => '1000',
+                'productos'     => [
+                    ['producto_id' => $producto->id, 'cantidad' => 2],
+                ],
+            ]);
+
+        $response->assertStatus(201);
+        $this->assertEquals(8, $producto->fresh()->stock);
+    }
+
+    /** @test */
+    public function store_con_pedido_pagado_permite_crear_nuevo_pedido()
+    {
+        $zona = ZonaEnvio::create(['nombre' => 'Zona 1000', 'cp_desde' => 1000, 'cp_hasta' => 1000, 'costo' => 500, 'activa' => true, 'orden' => 1]);
+        $producto = Producto::factory()->create(['stock' => 10]);
+
+        Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pagado',
+        ]);
+
+        Http::fake([
+            'https://www.googleapis.com/*' => Http::response([$this->kid => $this->certPem], 200),
+            'https://api.mercadopago.com/checkout/preferences' => Http::response(['id' => 'PREF-NEW', 'init_point' => 'https://mp.com/init'], 200),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'codigo_postal' => '1000',
+                'productos'     => [
+                    ['producto_id' => $producto->id, 'cantidad' => 2],
+                ],
+            ]);
+
+        $response->assertStatus(201);
+        $this->assertEquals(8, $producto->fresh()->stock);
+    }
+
+    /** @test */
+    public function store_vacia_del_carrito_los_items_del_pedido_y_mantiene_los_no_incluidos()
+    {
+        $zona = ZonaEnvio::create(['nombre' => 'Zona 1000', 'cp_desde' => 1000, 'cp_hasta' => 1000, 'costo' => 500, 'activa' => true, 'orden' => 1]);
+        $prod1 = Producto::factory()->create(['stock' => 10]);
+        $prod2 = Producto::factory()->create(['stock' => 10]);
+
+        Carrito::create(['user_id' => $this->user->id, 'firebase_uid' => $this->user->firebase_uid, 'producto_id' => $prod1->id, 'cantidad' => 2]);
+        Carrito::create(['user_id' => $this->user->id, 'firebase_uid' => $this->user->firebase_uid, 'producto_id' => $prod2->id, 'cantidad' => 3]);
+
+        Http::fake([
+            'https://www.googleapis.com/*' => Http::response([$this->kid => $this->certPem], 200),
+            'https://api.mercadopago.com/checkout/preferences' => Http::response(['id' => 'PREF-1', 'init_point' => 'https://mp.com/1'], 200),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/pedido/crear', [
+                'codigo_postal' => '1000',
+                'productos'     => [
+                    ['producto_id' => $prod1->id, 'cantidad' => 2],
+                ],
+            ]);
+
+        $response->assertStatus(201);
+
+        $this->assertDatabaseMissing('carrito', ['user_id' => $this->user->id, 'producto_id' => $prod1->id]);
+        $this->assertDatabaseHas('carrito', ['user_id' => $this->user->id, 'producto_id' => $prod2->id, 'cantidad' => 3]);
+    }
+
+    /** @test */
+    public function obtener_pedido_pendiente_devuelve_array_de_productos()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Juego Test', 'precioUnitario' => 1500]);
+
+        $pedido = Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => now()->addMinutes(15),
+        ]);
+
+        DetallePedido::create([
+            'pedido_id'       => $pedido->id,
+            'producto_id'     => $producto->id,
+            'cantidad'        => 2,
+            'precio_unitario' => 1500,
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->getJson('/ed/pedido/pendiente');
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'id' => $pedido->id,
+                'productos' => [
+                    [
+                        'producto_id'     => $producto->id,
+                        'nombre'          => 'Juego Test',
+                        'cantidad'        => 2,
+                        'precio_unitario' => 1500,
+                    ]
+                ]
+            ]);
+    }
+
+    /** @test */
+    public function cancelar_pedido_repone_items_al_carrito_con_cantidad_correcta()
+    {
+        $producto = Producto::factory()->create(['stock' => 5]);
+
+        $pedido = Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => now()->addMinutes(15),
+        ]);
+
+        DetallePedido::create([
+            'pedido_id'       => $pedido->id,
+            'producto_id'     => $producto->id,
+            'cantidad'        => 2,
+            'precio_unitario' => 1000,
+        ]);
+
+        Http::fake([
+            'https://www.googleapis.com/*' => Http::response([$this->kid => $this->certPem], 200),
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []], 200),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson("/ed/pedido/{$pedido->id}/cancelar");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'message'               => 'Pedido cancelado correctamente',
+                'reposicion_carrito_ok' => true,
+                'ajustes'               => [],
+            ]);
+
+        $this->assertDatabaseHas('carrito', [
+            'user_id'     => $this->user->id,
+            'producto_id' => $producto->id,
+            'cantidad'    => 2,
+        ]);
+    }
+
+    /** @test */
+    public function cancelar_pedido_suma_cantidades_si_el_producto_ya_estaba_en_el_carrito()
+    {
+        $producto = Producto::factory()->create(['stock' => 5]);
+
+        Carrito::create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'producto_id'  => $producto->id,
+            'cantidad'     => 1,
+        ]);
+
+        $pedido = Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => now()->addMinutes(15),
+        ]);
+
+        DetallePedido::create([
+            'pedido_id'       => $pedido->id,
+            'producto_id'     => $producto->id,
+            'cantidad'        => 2,
+            'precio_unitario' => 1000,
+        ]);
+
+        Http::fake([
+            'https://www.googleapis.com/*' => Http::response([$this->kid => $this->certPem], 200),
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []], 200),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson("/ed/pedido/{$pedido->id}/cancelar");
+
+        $response->assertStatus(200);
+
+        $this->assertDatabaseHas('carrito', [
+            'user_id'     => $this->user->id,
+            'producto_id' => $producto->id,
+            'cantidad'    => 3,
+        ]);
+    }
+
+    /** @test */
+    public function cancelar_pedido_topea_cantidad_al_stock_disponible_y_reporta_ajuste()
+    {
+        $producto = Producto::factory()->create(['nombre' => 'Super Mario', 'stock' => 2]);
+
+        Carrito::create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'producto_id'  => $producto->id,
+            'cantidad'     => 3,
+        ]);
+
+        $pedido = Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => now()->addMinutes(15),
+        ]);
+
+        DetallePedido::create([
+            'pedido_id'       => $pedido->id,
+            'producto_id'     => $producto->id,
+            'cantidad'        => 2,
+            'precio_unitario' => 1000,
+        ]);
+
+        Http::fake([
+            'https://www.googleapis.com/*' => Http::response([$this->kid => $this->certPem], 200),
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []], 200),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson("/ed/pedido/{$pedido->id}/cancelar");
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'message'               => 'Pedido cancelado correctamente',
+                'reposicion_carrito_ok' => true,
+                'ajustes'               => [
+                    [
+                        'producto_id'         => $producto->id,
+                        'nombre'              => 'Super Mario',
+                        'cantidad_solicitada' => 5,
+                        'cantidad_final'      => 4,
+                    ]
+                ],
+            ]);
+
+        $this->assertDatabaseHas('carrito', [
+            'user_id'     => $this->user->id,
+            'producto_id' => $producto->id,
+            'cantidad'    => 4,
+        ]);
+    }
+
+    /** @test */
+    public function carrito_controller_upsert_devuelve_cantidad_guardada_y_hubo_recorte()
+    {
+        $producto = Producto::factory()->create(['stock' => 3]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson('/ed/carrito', [
+                'producto_id' => $producto->id,
+                'cantidad'    => 5,
+            ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'producto_id'       => $producto->id,
+                'cantidad'          => 3,
+                'cantidad_guardada' => 3,
+                'hubo_recorte'      => true,
+            ]);
+    }
+
+    /** @test */
+    public function cancelar_pedido_normaliza_fila_preexistente_con_firebase_uid_y_user_id_null_sin_duplicar_filas()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+
+        // Fila preexistente en carrito con firebase_uid seteado pero user_id NULL
+        Carrito::create([
+            'user_id'      => null,
+            'firebase_uid' => $this->user->firebase_uid,
+            'producto_id'  => $producto->id,
+            'cantidad'     => 1,
+        ]);
+
+        $pedido = Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => now()->addMinutes(15),
+        ]);
+
+        DetallePedido::create([
+            'pedido_id'       => $pedido->id,
+            'producto_id'     => $producto->id,
+            'cantidad'        => 2,
+            'precio_unitario' => 1000,
+        ]);
+
+        Http::fake([
+            'https://www.googleapis.com/*' => Http::response([$this->kid => $this->certPem], 200),
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []], 200),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson("/ed/pedido/{$pedido->id}/cancelar");
+
+        $response->assertStatus(200);
+
+        // Debe haber EXACTAMENTE una sola fila en carrito para ese producto
+        $this->assertEquals(1, Carrito::where('producto_id', $producto->id)->count());
+
+        $this->assertDatabaseHas('carrito', [
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'producto_id'  => $producto->id,
+            'cantidad'     => 3,
         ]);
     }
 }
