@@ -38,7 +38,9 @@ class CarritoController extends Controller
             'cantidad'    => 'required|integer|min:1',
         ]);
 
-        $userId             = $request->user()->id;
+        $user               = $request->user();
+        $userId             = $user->id;
+        $firebaseUid        = $user->firebase_uid;
         $producto           = Producto::findOrFail($request->producto_id);
         $cantidadSolicitada = (int) $request->cantidad;
         $cantidad           = min($cantidadSolicitada, $producto->stock);
@@ -46,7 +48,7 @@ class CarritoController extends Controller
 
         $item = Carrito::updateOrCreate(
             ['user_id' => $userId, 'producto_id' => $request->producto_id],
-            ['cantidad' => $cantidad]
+            ['firebase_uid' => $firebaseUid, 'cantidad' => $cantidad]
         );
 
         $responseData = $item->toArray();

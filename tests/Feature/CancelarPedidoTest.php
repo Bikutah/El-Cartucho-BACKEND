@@ -778,4 +778,52 @@ class CancelarPedidoTest extends TestCase
                 'hubo_recorte'      => true,
             ]);
     }
+
+    /** @test */
+    public function cancelar_pedido_normaliza_fila_preexistente_con_firebase_uid_y_user_id_null_sin_duplicar_filas()
+    {
+        $producto = Producto::factory()->create(['stock' => 10]);
+
+        // Fila preexistente en carrito con firebase_uid seteado pero user_id NULL
+        Carrito::create([
+            'user_id'      => null,
+            'firebase_uid' => $this->user->firebase_uid,
+            'producto_id'  => $producto->id,
+            'cantidad'     => 1,
+        ]);
+
+        $pedido = Pedido::factory()->create([
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'estado_pago'  => 'pendiente',
+            'expira_at'    => now()->addMinutes(15),
+        ]);
+
+        DetallePedido::create([
+            'pedido_id'       => $pedido->id,
+            'producto_id'     => $producto->id,
+            'cantidad'        => 2,
+            'precio_unitario' => 1000,
+        ]);
+
+        Http::fake([
+            'https://www.googleapis.com/*' => Http::response([$this->kid => $this->certPem], 200),
+            'https://api.mercadopago.com/v1/payments/search*' => Http::response(['results' => []], 200),
+        ]);
+
+        $response = $this->withHeaders($this->tokenHeader())
+            ->postJson("/ed/pedido/{$pedido->id}/cancelar");
+
+        $response->assertStatus(200);
+
+        // Debe haber EXACTAMENTE una sola fila en carrito para ese producto
+        $this->assertEquals(1, Carrito::where('producto_id', $producto->id)->count());
+
+        $this->assertDatabaseHas('carrito', [
+            'user_id'      => $this->user->id,
+            'firebase_uid' => $this->user->firebase_uid,
+            'producto_id'  => $producto->id,
+            'cantidad'     => 3,
+        ]);
+    }
 }

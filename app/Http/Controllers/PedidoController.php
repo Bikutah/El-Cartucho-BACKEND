@@ -373,24 +373,14 @@ class PedidoController extends Controller
         DB::beginTransaction();
 
         try {
-            $pedidoPendienteVigente = Pedido::where(function ($q) use ($user) {
-                $q->where(function ($q2) use ($user) {
-                    if ($user->id) {
-                        $q2->where('user_id', $user->id);
-                    }
-                })->orWhere(function ($q2) use ($user) {
-                    if ($user->firebase_uid) {
-                        $q2->where('firebase_uid', $user->firebase_uid);
-                    }
-                });
-            })
-            ->where('estado_pago', 'pendiente')
-            ->where(function ($q) {
-                $q->whereNull('expira_at')
-                  ->orWhere('expira_at', '>', now());
-            })
-            ->lockForUpdate()
-            ->first();
+            $pedidoPendienteVigente = $this->aplicarFiltroUsuario(Pedido::query(), $user)
+                ->where('estado_pago', 'pendiente')
+                ->where(function ($q) {
+                    $q->whereNull('expira_at')
+                      ->orWhere('expira_at', '>', now());
+                })
+                ->lockForUpdate()
+                ->first();
 
             if ($pedidoPendienteVigente) {
                 DB::rollBack();
@@ -461,19 +451,9 @@ class PedidoController extends Controller
             // Vaciar del carrito del usuario los productos que entraron en este pedido
             $productoIdsCreados = array_column($request->productos, 'producto_id');
 
-            Carrito::where(function ($q) use ($user) {
-                $q->where(function ($q2) use ($user) {
-                    if ($user->id) {
-                        $q2->where('user_id', $user->id);
-                    }
-                })->orWhere(function ($q2) use ($user) {
-                    if ($user->firebase_uid) {
-                        $q2->where('firebase_uid', $user->firebase_uid);
-                    }
-                });
-            })
-            ->whereIn('producto_id', $productoIdsCreados)
-            ->delete();
+            $this->aplicarFiltroUsuario(Carrito::query(), $user)
+                ->whereIn('producto_id', $productoIdsCreados)
+                ->delete();
 
             DB::commit();
         } catch (\Exception $e) {
@@ -828,18 +808,7 @@ class PedidoController extends Controller
     {
         $user = $request->user();
 
-        $pedido = Pedido::with(['detalles.producto.imagenes'])
-            ->where(function ($q) use ($user) {
-                $q->where(function ($q2) use ($user) {
-                    if ($user->id) {
-                        $q2->where('user_id', $user->id);
-                    }
-                })->orWhere(function ($q2) use ($user) {
-                    if ($user->firebase_uid) {
-                        $q2->where('firebase_uid', $user->firebase_uid);
-                    }
-                });
-            })
+        $pedido = $this->aplicarFiltroUsuario(Pedido::with(['detalles.producto.imagenes']), $user)
             ->where('estado_pago', 'pendiente')
             ->where(function ($q) {
                 $q->whereNull('expira_at')
@@ -918,29 +887,29 @@ class PedidoController extends Controller
 
                 try {
                     if ($producto) {
-                        $itemExistente = Carrito::where(function ($q) use ($user) {
-                            if ($user->id) {
-                                $q->where('user_id', $user->id);
-                            }
-                            if ($user->firebase_uid) {
-                                $q->orWhere('firebase_uid', $user->firebase_uid);
-                            }
-                        })
-                        ->where('producto_id', $producto->id)
-                        ->first();
+                        $itemExistente = $this->aplicarFiltroUsuario(Carrito::query(), $user)
+                            ->where('producto_id', $producto->id)
+                            ->first();
 
                         $cantidadExistente = $itemExistente ? (int) $itemExistente->cantidad : 0;
                         $cantidadSolicitada = $cantidadExistente + (int) $detalle->cantidad;
                         $cantidadFinal = min($cantidadSolicitada, (int) $producto->stock);
 
                         if ($cantidadFinal > 0) {
-                            Carrito::updateOrCreate(
-                                ['user_id' => $user->id, 'producto_id' => $producto->id],
-                                [
+                            if ($itemExistente) {
+                                $itemExistente->update([
+                                    'user_id'      => $user->id,
                                     'firebase_uid' => $user->firebase_uid,
                                     'cantidad'     => $cantidadFinal,
-                                ]
-                            );
+                                ]);
+                            } else {
+                                Carrito::create([
+                                    'user_id'      => $user->id,
+                                    'firebase_uid' => $user->firebase_uid,
+                                    'producto_id'  => $producto->id,
+                                    'cantidad'     => $cantidadFinal,
+                                ]);
+                            }
                         }
 
                         if ($cantidadSolicitada > $cantidadFinal) {
@@ -967,6 +936,21 @@ class PedidoController extends Controller
                 'reposicion_carrito_ok' => $reposicionOk,
                 'ajustes'               => $ajustes,
             ], 200);
+        });
+    }
+
+    private function aplicarFiltroUsuario($query, $user)
+    {
+        return $query->where(function ($q) use ($user) {
+            $q->where(function ($q2) use ($user) {
+                if ($user->id) {
+                    $q2->where('user_id', $user->id);
+                }
+            })->orWhere(function ($q2) use ($user) {
+                if ($user->firebase_uid) {
+                    $q2->where('firebase_uid', $user->firebase_uid);
+                }
+            });
         });
     }
 }
