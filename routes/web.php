@@ -15,6 +15,7 @@ use App\Http\Controllers\EstadisticasController;
 
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\ZonaEnvioController;
+use App\Http\Controllers\PushNotificationController;
 
 // Rutas de autenticación
 Route::get('/login', [LoginController::class, 'showLoginForm'])->name('login');
@@ -57,4 +58,8 @@ Route::middleware(['auth', AdminMiddleware::class])->group(function () {
     Route::get('/estadisticas/productos-mas-vendidos', [EstadisticasController::class, 'productosMasVendidos']);
     Route::get('/estadisticas/resumen-general', [EstadisticasController::class, 'resumenGeneral']);
     Route::get('/estadisticas/ventas-por-estado', [EstadisticasController::class, 'ventasPorEstado']);
+
+    // Notificaciones Push
+    Route::get('/notificaciones', [PushNotificationController::class, 'index'])->name('notificaciones.index');
+    Route::post('/notificaciones/enviar', [PushNotificationController::class, 'enviar'])->name('notificaciones.enviar');
 });

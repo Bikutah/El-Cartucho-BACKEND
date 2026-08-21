@@ -55,4 +55,9 @@ class User extends Authenticatable
     {
         return $this->hasMany(Pedido::class);
     }
+
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(\App\Models\PushSubscription::class);
+    }
 }

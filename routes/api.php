@@ -10,6 +10,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\CarritoController;
 use App\Http\Controllers\WishlistController;
 use App\Http\Controllers\CronController;
+use App\Http\Controllers\PushNotificationController;
 
 // ─── Sin autenticación ───────────────────────────────────────────────────────
 
@@ -35,6 +36,8 @@ Route::get('/pedido/costo/{cp}', [PedidoController::class, 'calcularCostoEnvio']
 // GET /profile tolera que el usuario no exista aún; el controller hace firstOrCreate.
 Route::middleware(['firebase.token'])->group(function () {
     Route::get('/profile', [ProfileController::class, 'getProfile']);
+    // Clave pública VAPID — necesaria antes de que el usuario exista localmente
+    Route::get('/push/vapid-key', [PushNotificationController::class, 'vapidKey']);
 });
 
 // ─── Token verificado + usuario local existente ──────────────────────────────
@@ -62,4 +65,9 @@ Route::middleware(['firebase.token', 'firebase.user'])->group(function () {
     Route::post('/wishlist/toggle', [WishlistController::class, 'toggle']);
     Route::get('/wishlist/check/{productoId}', [WishlistController::class, 'check']);
     Route::delete('/wishlist/{productoId}', [WishlistController::class, 'remove']);
+
+    #Push Notifications
+    Route::post('/push/subscribe',   [PushNotificationController::class, 'subscribe']);
+    Route::delete('/push/unsubscribe', [PushNotificationController::class, 'unsubscribe']);
+    Route::get('/push/status',       [PushNotificationController::class, 'status']);
 });
