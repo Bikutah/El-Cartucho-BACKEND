@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Events\PedidoEstadoActualizado;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
@@ -120,6 +121,8 @@ class Pedido extends Model
             'created_at'      => now(),
         ]);
 
+        event(new PedidoEstadoActualizado($this, 'pago', $estadoAnterior, $nuevoEstado, $origen, $userId));
+
         return true;
     }
 
@@ -227,6 +230,8 @@ class Pedido extends Model
             'observacion'     => $observacion,
             'created_at'      => now(),
         ]);
+
+        event(new PedidoEstadoActualizado($this, 'envio', $estadoAnterior, $nuevoEstado, $origen, $userId));
 
         return true;
     }

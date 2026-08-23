@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Events\PedidoEstadoActualizado;
+use App\Listeners\EnviarNotificacionCambioEstado;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Facades\URL;
 
@@ -27,5 +30,11 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             URL::forceScheme('https');
         }
+
+        // Notificaciones push transaccionales
+        Event::listen(
+            PedidoEstadoActualizado::class,
+            EnviarNotificacionCambioEstado::class
+        );
     }
 }

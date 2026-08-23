@@ -4,24 +4,16 @@ namespace App\Http\Controllers;
 
 use App\Models\PushSubscription;
 use App\Models\NotificationLog;
+use App\Services\PushNotificationService;
 use Illuminate\Http\Request;
-use Minishlink\WebPush\WebPush;
-use Minishlink\WebPush\Subscription;
 
 class PushNotificationController extends Controller
 {
     // ─── Helpers ─────────────────────────────────────────────────────────────────
 
-    private function makeWebPush(): WebPush
-    {
-        return new WebPush([
-            'VAPID' => [
-                'subject'    => config('app.url'),
-                'publicKey'  => config('webpush.vapid.public_key'),
-                'privateKey' => config('webpush.vapid.private_key'),
-            ],
-        ]);
-    }
+    public function __construct(
+        private readonly PushNotificationService $pushService
+    ) {}
 
     // ─── API — rutas autenticadas con firebase ────────────────────────────────
 
@@ -39,6 +31,7 @@ class PushNotificationController extends Controller
     /**
      * POST /api/push/subscribe
      * Guarda (o actualiza) la suscripción del usuario actual.
+     * Después del updateOrCreate, manda un welcome push al dispositivo recién suscrito.
      */
     public function subscribe(Request $request)
     {
@@ -54,7 +47,7 @@ class PushNotificationController extends Controller
             return response()->json(['error' => 'No autenticado'], 401);
         }
 
-        PushSubscription::updateOrCreate(
+        $sub = PushSubscription::updateOrCreate(
             [
                 'user_id'  => $user->id,
                 'endpoint' => $request->endpoint,
@@ -64,6 +57,25 @@ class PushNotificationController extends Controller
                 'auth'   => $request->input('keys.auth'),
             ]
         );
+
+        // Welcome push al dispositivo recién suscrito.
+        // Si falla, la suscripción ya se guardó: el welcome es un extra.
+        try {
+            $welcomePayload = json_encode([
+                'title' => '¡Listo! 🎮',
+                'body'  => 'Vas a recibir las novedades de tus pedidos por acá.',
+                'url'   => '/',
+                'icon'  => '/icon.svg',
+                'badge' => '/favicon.ico',
+            ]);
+            $this->pushService->sendToSubscription($sub, $welcomePayload);
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::warning('[PushNotif] Welcome push falló (suscripción guardada ok)', [
+                'user_id'  => $user->id,
+                'endpoint' => $request->endpoint,
+                'error'    => $e->getMessage(),
+            ]);
+        }
 
         return response()->json(['ok' => true]);
     }
@@ -143,7 +155,7 @@ class PushNotificationController extends Controller
             'badge' => '/favicon.ico',
         ]);
 
-        [$exitosas, $fallidas, $enviadas] = $this->sendToAllSubscriptions($payload);
+        [$exitosas, $fallidas, $enviadas] = $this->pushService->sendToAll($payload);
 
         NotificationLog::create([
             'titulo'   => $request->titulo,
@@ -173,7 +185,7 @@ class PushNotificationController extends Controller
             'badge' => '/favicon.ico',
         ]);
 
-        [$exitosas, $fallidas, $enviadas] = $this->sendToAllSubscriptions($payload);
+        [$exitosas, $fallidas, $enviadas] = $this->pushService->sendToAll($payload);
 
         NotificationLog::create([
             'titulo'   => '¡Nuevo producto disponible!',
@@ -184,59 +196,5 @@ class PushNotificationController extends Controller
             'fallidas' => $fallidas,
             'tipo'     => 'nuevo_producto',
         ]);
-    }
-
-    // ─── Helper privado ───────────────────────────────────────────────────────
-
-    /**
-     * Envía $payload a todas las suscripciones activas.
-     * Elimina automáticamente las suscripciones expiradas/inválidas.
-     * @return array [exitosas, fallidas, total]
-     */
-    private function sendToAllSubscriptions(string $payload): array
-    {
-        $subscriptions = PushSubscription::all();
-
-        if ($subscriptions->isEmpty()) {
-            return [0, 0, 0];
-        }
-
-        $webPush = $this->makeWebPush();
-
-        foreach ($subscriptions as $sub) {
-            $webPush->queueNotification(
-                Subscription::create([
-                    'endpoint'        => $sub->endpoint,
-                    'contentEncoding' => 'aesgcm',
-                    'keys' => [
-                        'p256dh' => $sub->p256dh,
-                        'auth'   => $sub->auth,
-                    ],
-                ]),
-                $payload
-            );
-        }
-
-        $exitosas = 0;
-        $fallidas = 0;
-        $toDelete = [];
-
-        foreach ($webPush->flush() as $report) {
-            if ($report->isSuccess()) {
-                $exitosas++;
-            } else {
-                $fallidas++;
-                // Si el endpoint ya no es válido (410 Gone), lo eliminamos
-                if ($report->isSubscriptionExpired()) {
-                    $toDelete[] = $report->getRequest()->getUri()->__toString();
-                }
-            }
-        }
-
-        if (!empty($toDelete)) {
-            PushSubscription::whereIn('endpoint', $toDelete)->delete();
-        }
-
-        return [$exitosas, $fallidas, $subscriptions->count()];
     }
 }
