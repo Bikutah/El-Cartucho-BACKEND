@@ -49,7 +49,10 @@ class PushNotificationController extends Controller
             'keys.auth'   => 'required|string',
         ]);
 
-        $user = $request->attributes->get('firebase_user');
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'No autenticado'], 401);
+        }
 
         PushSubscription::updateOrCreate(
             [
@@ -75,7 +78,10 @@ class PushNotificationController extends Controller
             'endpoint' => 'required|string',
         ]);
 
-        $user = $request->attributes->get('firebase_user');
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['error' => 'No autenticado'], 401);
+        }
 
         PushSubscription::where('user_id', $user->id)
             ->where('endpoint', $request->endpoint)
@@ -91,7 +97,10 @@ class PushNotificationController extends Controller
     public function status(Request $request)
     {
         $request->validate(['endpoint' => 'required|string']);
-        $user = $request->attributes->get('firebase_user');
+        $user = $request->user();
+        if (!$user) {
+            return response()->json(['subscribed' => false]);
+        }
 
         $exists = PushSubscription::where('user_id', $user->id)
             ->where('endpoint', $request->endpoint)
