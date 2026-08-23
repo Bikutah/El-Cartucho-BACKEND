@@ -7,7 +7,7 @@
         <h1 class="h3 mb-0 fw-bold">Notificaciones Push</h1>
         <p class="text-muted small mb-0">Enviá alertas a los usuarios con PWA instalada</p>
     </div>
-    <div class="badge fs-6 px-3 py-2" style="background-color: var(--color-indigo); color: white;">
+    <div class="badge fs-6 px-3 py-2" style="background-color: var(--color-indigo-light); color: white;">
         <i class="fas fa-mobile-alt me-2"></i>
         {{ $totalSuscriptos }} {{ $totalSuscriptos === 1 ? 'usuario suscripto' : 'usuarios suscriptos' }}
     </div>
@@ -32,7 +32,7 @@
     {{-- Formulario de envío --}}
     <div class="col-lg-5">
         <div class="card shadow-sm border-0 h-100">
-            <div class="card-header py-3 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, var(--color-indigo) 0%, #1b194f 100%); color: white; border-radius: 12px 12px 0 0;">
+            <div class="card-header py-3 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, var(--color-indigo-light) 0%, #1b194f 100%); color: white; border-radius: 12px 12px 0 0;">
                 <i class="fas fa-paper-plane"></i>
                 <h6 class="m-0 fw-semibold">Nueva Notificación</h6>
             </div>
@@ -110,7 +110,7 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" style="background: var(--color-indigo); border-color: var(--color-indigo);" id="btn-enviar">
+                        <button type="submit" class="btn btn-primary w-100 py-2 fw-semibold" style="background: var(--color-indigo-light); border-color: var(--color-indigo-light);" id="btn-enviar">
                             <i class="fas fa-paper-plane me-2"></i>
                             Enviar a {{ $totalSuscriptos }} {{ $totalSuscriptos === 1 ? 'usuario' : 'usuarios' }}
                         </button>
